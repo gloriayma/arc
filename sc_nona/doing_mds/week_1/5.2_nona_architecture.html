@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nona Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:   #16a34a;
+    --green-bg:#f0fdf4;
+    --green-border:#bbf7d0;
+    --blue:    #2563eb;
+    --blue-bg: #eff6ff;
+    --blue-border:#bfdbfe;
+    --orange:  #d97706;
+    --orange-bg:#fffbeb;
+    --orange-border:#fde68a;
+    --purple:  #7c3aed;
+    --purple-bg:#f5f3ff;
+    --purple-border:#ddd6fe;
+    --pink:    #db2777;
+    --pink-bg: #fdf2f8;
+    --pink-border:#fbcfe8;
+    --red:     #dc2626;
+    --red-bg:  #fef2f2;
+    --red-border:#fecaca;
+    --gray:    #374151;
+    --gray-light:#f9fafb;
+    --gray-border:#e5e7eb;
+    --text:    #111827;
+    --text-muted:#6b7280;
+    --code-bg: #0f172a;
+    --code-text:#e2e8f0;
+    --surface: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    background: #f8fafc;
+    line-height: 1.6;
+  }
+
+  .page-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    color: white;
+    padding: 52px 40px 44px;
+  }
+  .page-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+  .page-header .subtitle { font-size: 14px; opacity: 0.6; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+  .page-header p { font-size: 16px; opacity: 0.85; max-width: 760px; }
+
+  .stat-row {
+    display: flex; gap: 24px; margin-top: 28px; flex-wrap: wrap;
+  }
+  .stat { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 20px; }
+  .stat .num { font-size: 22px; font-weight: 700; }
+  .stat .lbl { font-size: 12px; opacity: 0.7; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .container { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+  /* TL;DR */
+  .tldr-section {
+    background: white;
+    border-bottom: 1px solid var(--gray-border);
+    padding: 36px 0;
+  }
+  .tldr-card {
+    background: var(--blue-bg); border-left: 4px solid var(--blue);
+    border-radius: 0 10px 10px 0; padding: 18px 22px;
+  }
+  .tldr-card h2 { font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .tldr-card p { font-size: 15px; }
+  .tldr-card p + p { margin-top: 10px; }
+
+  /* section */
+  .section {
+    padding: 44px 0;
+    border-bottom: 1px solid var(--gray-border);
+    background: white;
+  }
+  .section.alt { background: #f8fafc; }
+  .section-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 8px;
+  }
+  .section h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .section .lede { font-size: 15px; color: var(--text-muted); margin-bottom: 28px; max-width: 760px; }
+
+  p { margin-bottom: 12px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* I/O block */
+  .io-block {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px;
+    align-items: center; margin: 24px 0;
+  }
+  .io-side {
+    background: white; border: 1.5px solid var(--gray-border);
+    border-radius: 12px; padding: 20px;
+  }
+  .io-side h3 { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+  .io-arrow { font-size: 28px; color: var(--text-muted); text-align: center; }
+
+  .tensor {
+    background: var(--code-bg); color: var(--code-text);
+    border-radius: 8px; padding: 12px 14px; margin: 8px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    line-height: 1.5;
+  }
+  .tensor .label { color: #93c5fd; font-weight: 500; }
+  .tensor .shape { color: #fde047; }
+  .tensor .note  { color: #94a3b8; font-size: 11px; display: block; margin-top: 4px; }
+
+  /* matrix visualization */
+  .matrix-viz {
+    background: var(--code-bg); border-radius: 10px; padding: 22px;
+    color: var(--code-text); margin: 20px 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    overflow-x: auto;
+  }
+  .matrix-viz .caption { color: #94a3b8; font-size: 11px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .matrix-row { display: flex; gap: 2px; margin: 2px 0; align-items: center; }
+  .matrix-label { color: #93c5fd; width: 90px; flex-shrink: 0; font-size: 11px; }
+  .cell {
+    width: 22px; height: 22px; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600;
+  }
+  .cell.dna-A { background: #fca5a5; color: #7f1d1d; }
+  .cell.dna-C { background: #93c5fd; color: #1e3a8a; }
+  .cell.dna-G { background: #86efac; color: #14532d; }
+  .cell.dna-T { background: #fde047; color: #713f12; }
+  .cell.dna-N { background: #475569; color: #cbd5e1; }
+  .cell.zero  { background: #1e293b; color: #475569; border: 1px solid #334155; }
+  .cell.one   { background: #16a34a; color: white; }
+  .cell.mask  { background: #4b5563; color: #9ca3af; }
+  .cell.track { background: #7c3aed; color: white; }
+  .cell.track-d { background: #5b21b6; color: #c4b5fd; }
+  .cell.track-l { background: #c4b5fd; color: #4c1d95; }
+
+  /* architecture diagram */
+  .arch-diagram {
+    background: white; border: 1.5px solid var(--gray-border);
+    border-radius: 14px; padding: 32px 24px;
+    margin: 24px 0;
+  }
+  .arch-row {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    margin: 14px 0; flex-wrap: wrap;
+  }
+  .arch-box {
+    background: var(--blue-bg); border: 1.5px solid var(--blue-border);
+    border-radius: 10px; padding: 14px 18px; text-align: center;
+    min-width: 140px;
+  }
+  .arch-box .name { font-size: 13px; font-weight: 600; color: var(--blue); }
+  .arch-box .sub  { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .arch-box.seq { background: var(--blue-bg); border-color: var(--blue-border); }
+  .arch-box.seq .name { color: var(--blue); }
+  .arch-box.trk { background: var(--purple-bg); border-color: var(--purple-border); }
+  .arch-box.trk .name { color: var(--purple); }
+  .arch-box.fuse { background: var(--orange-bg); border-color: var(--orange-border); }
+  .arch-box.fuse .name { color: var(--orange); }
+  .arch-box.xform { background: #fef3c7; border-color: #fcd34d; }
+  .arch-box.xform .name { color: #92400e; }
+  .arch-box.out { background: var(--green-bg); border-color: var(--green-border); }
+  .arch-box.out .name { color: var(--green); }
+  .arch-arrow {
+    font-size: 22px; color: var(--text-muted);
+  }
+  .arch-arrow.down { transform: rotate(90deg); margin: -4px 0; }
+
+  /* masking matrix */
+  .mask-config {
+    background: white; border: 1.5px solid var(--gray-border);
+    border-radius: 12px; padding: 20px; margin: 16px 0;
+  }
+  .mask-config h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .mask-config .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    background: var(--gray-light); color: var(--text-muted);
+    display: inline-block; margin-bottom: 10px;
+  }
+  .mask-config .desc { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+  .mask-row { display: grid; grid-template-columns: 120px 1fr 1fr; gap: 14px; align-items: center; padding: 8px 0; }
+  .mask-row + .mask-row { border-top: 1px dashed var(--gray-border); }
+  .mask-row .label { font-size: 12px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+  .mask-tape {
+    display: flex; height: 22px; border-radius: 4px; overflow: hidden;
+  }
+  .mask-tape .obs { background: var(--green); flex: 1; }
+  .mask-tape .mskd { background: #cbd5e1; flex: 1; }
+
+  /* model variants */
+  .variants {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0;
+  }
+  .variant {
+    background: white; border: 1.5px solid var(--gray-border);
+    border-radius: 12px; padding: 20px; position: relative;
+  }
+  .variant .num {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; color: white; margin-bottom: 12px;
+  }
+  .variant.v1 .num { background: var(--blue); }
+  .variant.v2 .num { background: var(--purple); }
+  .variant.v3 .num { background: var(--pink); }
+  .variant h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .variant .figref { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+  .variant ul { list-style: none; padding: 0; }
+  .variant li { font-size: 13px; padding: 4px 0; display: flex; gap: 6px; }
+  .variant li::before { content: "•"; color: var(--text-muted); flex-shrink: 0; }
+  .variant code {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--gray-light); padding: 1px 5px; border-radius: 4px;
+  }
+
+  /* concept callouts */
+  .why-box {
+    background: var(--blue-bg); border-left: 3px solid var(--blue);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 18px 0;
+    font-size: 14px;
+  }
+  .why-box strong { color: var(--blue); }
+  .note-box {
+    background: var(--orange-bg); border-left: 3px solid var(--orange);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 18px 0;
+    font-size: 14px;
+  }
+  .note-box strong { color: var(--orange); }
+  .key-box {
+    background: var(--purple-bg); border-left: 3px solid var(--purple);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 18px 0;
+    font-size: 14px;
+  }
+  .key-box strong { color: var(--purple); }
+
+  /* code block */
+  .code-block {
+    background: var(--code-bg); border-radius: 10px; padding: 18px 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    line-height: 1.7; color: var(--code-text);
+    overflow-x: auto; margin: 18px 0;
+  }
+  .code-block .cb { color: #64748b; }
+  .code-block .ck { color: #93c5fd; }
+  .code-block .cv { color: #86efac; }
+  .code-block .cs { color: #fde047; }
+  .code-block .cn { color: #fdba74; }
+
+  /* table */
+  table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 13.5px; background: white; border-radius: 10px; overflow: hidden; border: 1px solid var(--gray-border); }
+  th { background: var(--gray-light); font-weight: 600; text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--gray-border); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--gray-border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td code, th code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; background: var(--gray-light); padding: 1px 5px; border-radius: 4px; }
+
+  /* loss equation block */
+  .loss-block {
+    background: white; border: 1.5px solid var(--gray-border);
+    border-radius: 12px; padding: 20px; margin: 18px 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  }
+  .loss-half h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+  .loss-half.seq h4 { color: var(--blue); }
+  .loss-half.trk h4 { color: var(--purple); }
+  .loss-half p { font-size: 13px; color: var(--text-muted); }
+  .loss-eq {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    background: var(--gray-light); padding: 10px 12px; border-radius: 6px;
+    margin-top: 10px;
+  }
+
+  /* hyperparams two-column */
+  .hp-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+    margin: 16px 0;
+  }
+  .hp {
+    background: white; border: 1px solid var(--gray-border);
+    border-radius: 8px; padding: 12px 14px;
+  }
+  .hp .k { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-family: 'JetBrains Mono', monospace; }
+  .hp .v { font-size: 15px; font-weight: 600; margin-top: 2px; }
+
+  footer { padding: 40px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  @media (max-width: 760px) {
+    .io-block { grid-template-columns: 1fr; }
+    .io-arrow { transform: rotate(90deg); }
+    .variants { grid-template-columns: 1fr; }
+    .loss-block { grid-template-columns: 1fr; }
+    .hp-grid { grid-template-columns: 1fr; }
+    .mask-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────────────────────── HEADER ───────────────────────── -->
+<div class="page-header">
+  <div class="container">
+    <div class="subtitle">Nair et al. 2025 · bioRxiv 2025.11.06.687036</div>
+    <h1>Nona: a multimodal masking framework for functional genomics</h1>
+    <p>One model. One transformer. Many tasks. Nona ingests DNA sequence and base-resolution functional tracks side-by-side, masks arbitrary subsets of either modality, and asks the network to reconstruct the missing values. The choice of mask defines the task.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num">~120M</div><div class="lbl">params (context-aware)</div></div>
+      <div class="stat"><div class="num">196,608 bp</div><div class="lbl">input length</div></div>
+      <div class="stat"><div class="num">512</div><div class="lbl">channel width</div></div>
+      <div class="stat"><div class="num">12</div><div class="lbl">transformer layers</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── TL;DR ───────────────────────── -->
+<div class="tldr-section">
+  <div class="container">
+    <div class="tldr-card">
+      <h2>The one-paragraph summary</h2>
+      <p>Nona is a <strong>Borzoi-style hybrid conv-transformer U-Net</strong>, but with a twist: both DNA and functional tracks are <strong>both inputs and outputs</strong>, gated by binary masks. Mask all tracks → it's a sequence-to-function model (Enformer). Mask the central window of tracks → it's a context-aware extrapolator. Mask the sequence → it's a functional-context language model. Mask reads at SNPs → it does genotyping. One architecture, one weight set per model, many heads emerge from masking alone.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── INPUT/OUTPUT ───────────────────────── -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">§ 1 — The input/output contract</div>
+    <h2>Two parallel tapes, four masks</h2>
+    <p class="lede">The model sees the genome as a stack of co-registered tracks: one is DNA, the rest are functional. Everything is base-resolution, everything is indexed by the same genomic coordinate, and any position in any channel can be masked.</p>
+
+    <div class="io-block">
+      <div class="io-side">
+        <h3>Inputs</h3>
+        <div class="tensor">
+          <div><span class="label">seq</span> : <span class="shape">L_in × 4</span></div>
+          <span class="note">masked one-hot DNA (A,C,G,T). Masked positions zero all 4 channels.</span>
+        </div>
+        <div class="tensor">
+          <div><span class="label">tracks</span> : <span class="shape">L_in × T</span></div>
+          <span class="note">masked base-resolution signal (e.g. DNase, CAGE, ATAC). Masked positions = 0.</span>
+        </div>
+        <div class="tensor">
+          <div><span class="label">seq_mask</span> : <span class="shape">L_in × 4</span></div>
+          <span class="note">1 = observed, 0 = masked. All 4 channels share the same value per position.</span>
+        </div>
+        <div class="tensor">
+          <div><span class="label">track_mask</span> : <span class="shape">L_in × T</span></div>
+          <span class="note">distinguishes real zeros from masked zeros.</span>
+        </div>
+        <div class="tensor" style="background:#1e293b; color:#fde047;">
+          total channels stacked → <span class="shape">L_in × 2·(4+T)</span>
+        </div>
+      </div>
+
+      <div class="io-arrow">→</div>
+
+      <div class="io-side">
+        <h3>Outputs</h3>
+        <div class="tensor">
+          <div><span class="label">seq_logits</span> : <span class="shape">L_out × 4</span></div>
+          <span class="note">per-base probability logits (cross-entropy target).</span>
+        </div>
+        <div class="tensor">
+          <div><span class="label">track_pred</span> : <span class="shape">L_out × T</span></div>
+          <span class="note">predicted track signal on log scale. Clipped to (−10, ln 5000 ≈ 8.517).</span>
+        </div>
+        <div class="tensor">
+          <div><span class="label">output masks</span> : <span class="shape">L_out × 4</span>, <span class="shape">L_out × T</span></div>
+          <span class="note">determine where the loss is computed. Usually the inverse of the input mask, but not required.</span>
+        </div>
+        <p style="font-size:12px; color:var(--text-muted); margin-top:14px;">L_out ≤ L_in. The central L_out positions are cropped after upsampling.</p>
+      </div>
+    </div>
+
+    <div class="matrix-viz">
+      <div class="caption">a masked input row, position-by-position (toy: T=3 tracks)</div>
+      <div class="matrix-row">
+        <div class="matrix-label">seq A</div>
+        <div class="cell zero">0</div><div class="cell one">1</div><div class="cell zero">0</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell zero">0</div><div class="cell one">1</div><div class="cell zero">0</div>
+      </div>
+      <div class="matrix-row">
+        <div class="matrix-label">seq C</div>
+        <div class="cell one">1</div><div class="cell zero">0</div><div class="cell zero">0</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell zero">0</div><div class="cell zero">0</div><div class="cell zero">0</div>
+      </div>
+      <div class="matrix-row">
+        <div class="matrix-label">seq G</div>
+        <div class="cell zero">0</div><div class="cell zero">0</div><div class="cell zero">0</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell one">1</div><div class="cell zero">0</div><div class="cell one">1</div>
+      </div>
+      <div class="matrix-row">
+        <div class="matrix-label">seq T</div>
+        <div class="cell zero">0</div><div class="cell zero">0</div><div class="cell one">1</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell zero">0</div><div class="cell zero">0</div><div class="cell zero">0</div>
+      </div>
+      <div class="matrix-row" style="margin-top:8px;">
+        <div class="matrix-label">seq_mask</div>
+        <div class="cell one">1</div><div class="cell one">1</div><div class="cell one">1</div><div class="cell zero">0</div><div class="cell zero">0</div><div class="cell one">1</div><div class="cell one">1</div><div class="cell one">1</div>
+      </div>
+      <div class="matrix-row" style="margin-top:10px;">
+        <div class="matrix-label">track 1</div>
+        <div class="cell track-l">2</div><div class="cell track">5</div><div class="cell track-d">9</div><div class="cell track-l">1</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell track-l">3</div>
+      </div>
+      <div class="matrix-row">
+        <div class="matrix-label">track 2</div>
+        <div class="cell zero">0</div><div class="cell track-l">1</div><div class="cell track">4</div><div class="cell track">6</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell zero">0</div>
+      </div>
+      <div class="matrix-row">
+        <div class="matrix-label">track 3</div>
+        <div class="cell track-l">1</div><div class="cell zero">0</div><div class="cell track-l">2</div><div class="cell track-l">3</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell mask">·</div><div class="cell track-l">1</div>
+      </div>
+      <div class="matrix-row" style="margin-top:8px;">
+        <div class="matrix-label">track_mask</div>
+        <div class="cell one">1</div><div class="cell one">1</div><div class="cell one">1</div><div class="cell one">1</div><div class="cell zero">0</div><div class="cell zero">0</div><div class="cell zero">0</div><div class="cell one">1</div>
+      </div>
+      <div style="color:#94a3b8; font-size:11px; margin-top:14px; padding-top:10px; border-top:1px dashed #334155;">
+        Mask values are <em>per-position</em>, not per-channel: all 4 sequence channels at a position share the same mask bit. The model has to use the mask to tell apart "genuinely missing base (N)" from "intentionally hidden", and real zeros in a track from masked zeros.
+      </div>
+    </div>
+
+    <div class="key-box">
+      <strong>Why two parallel tapes, not MSA-style stacking?</strong> The vertical axis is <em>modality</em> (sequence + T fixed bulk tracks), not <em>homologous samples</em>. There is no cross-attention between tracks — they are fused early into a single representation by elementwise summation after their separate conv encoders. Adding more tracks ≠ adding rows of an alignment; it's adding channels.
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── ARCHITECTURE ───────────────────────── -->
+<div class="section alt">
+  <div class="container">
+    <div class="section-label">§ 2 — Architecture</div>
+    <h2>Hybrid conv-transformer U-Net, simplified from Borzoi</h2>
+    <p class="lede">Separate convolutional encoders embed sequence and tracks independently. Their representations are <strong>summed</strong> just before the transformer. The transformer does the long-range work. A symmetric upsampling decoder, with U-Net skip connections from both encoder branches, recovers base resolution.</p>
+
+    <div class="arch-diagram">
+      <div class="arch-row">
+        <div class="arch-box seq">
+          <div class="name">DNA + seq mask</div>
+          <div class="sub">L_in × 8 (4 + 4)</div>
+        </div>
+        <div class="arch-box trk">
+          <div class="name">Tracks + track mask</div>
+          <div class="sub">L_in × 2T</div>
+        </div>
+      </div>
+      <div class="arch-arrow down">→</div>
+      <div class="arch-row">
+        <div class="arch-box seq">
+          <div class="name">Seq conv encoder</div>
+          <div class="sub">initial conv → n_reductions × (residual conv blocks + maxpool stride 2)</div>
+        </div>
+        <div class="arch-box trk">
+          <div class="name">Track conv encoder</div>
+          <div class="sub">same structure, independent weights. Skip connections stored before each pool.</div>
+        </div>
+      </div>
+      <div class="arch-arrow down">→</div>
+      <div class="arch-row">
+        <div class="arch-box fuse">
+          <div class="name">Sum (⊕)</div>
+          <div class="sub">seq_enc + track_enc — single fused stream, 512 channels</div>
+        </div>
+      </div>
+      <div class="arch-arrow down">→</div>
+      <div class="arch-row">
+        <div class="arch-box xform">
+          <div class="name">Transformer stack</div>
+          <div class="sub">x-transformers · 12 layers · 8 heads · flash attention · RoPE</div>
+        </div>
+      </div>
+      <div class="arch-arrow down">→</div>
+      <div class="arch-row">
+        <div class="arch-box trk">
+          <div class="name">Upsampling decoder</div>
+          <div class="sub">n_reductions × (upsample + combine seq & track skips + residual conv blocks)</div>
+        </div>
+      </div>
+      <div class="arch-arrow down">→</div>
+      <div class="arch-row">
+        <div class="arch-box out">
+          <div class="name">Final conv → 4 + T channels</div>
+          <div class="sub">split into seq logits (4) and track preds (T). Crop center to L_out. Clip to (−10, 8.517).</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="why-box">
+      <strong>The fusion choice.</strong> Two separate conv encoders, summed before transformer. This is a deliberate design over (a) concatenating channels from step 1, or (b) using cross-attention between modalities. The advantage: at sequence-to-function inference (tracks are all-masked, all-zero), the model can <em>zero out the track skip connections and the deepest track representation</em> to avoid batch-norm instabilities — a trick the paper calls out explicitly.
+    </div>
+
+    <h3 style="font-size:18px; margin: 32px 0 14px;">Building blocks</h3>
+    <table>
+      <thead><tr><th style="width:32%">Component</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>residual conv block</code></td><td>conv + dropout + batch norm + skip connection. The reusable unit throughout encoder and decoder.</td></tr>
+        <tr><td><code>encoder stage</code></td><td><code>n_conv_per_reduction</code> residual conv blocks → pointwise conv (stored as skip) → maxpool stride 2.</td></tr>
+        <tr><td><code>transformer block</code></td><td>x-transformers library, flash attention, rotary positional embeddings (RoPE), constant 512-channel width.</td></tr>
+        <tr><td><code>decoder stage</code></td><td>upsample × 2 → combine with seq + track skips (if present) → <code>n_conv_per_reduction</code> residual conv blocks.</td></tr>
+        <tr><td><code>output head</code></td><td>two extra conv layers → final conv producing 4 + T channels → split into seq (4) and tracks (T) → center-crop to L_out → clip.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <strong>Two configurations of the same architecture.</strong> The <em>context-aware</em> model uses <code>n_reductions=7</code> (full U-Net, downsamples 128×). The <em>functional language model</em> and <em>genotyping model</em> use <code>n_reductions=0</code>: no downsampling, no skips needed, pure conv+transformer at base resolution. Same code path, different hyperparameter.
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── MASKING ───────────────────────── -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">§ 3 — The masking framework</div>
+    <h2>The mask <em>is</em> the task</h2>
+    <p class="lede">Four binary masks per training example — two for inputs (what the model sees) and two for outputs (where the loss is computed). Every existing genomic foundation-model objective falls out of this by choosing the right masks.</p>
+
+    <div class="mask-config">
+      <h4>Sequence-to-function <span class="badge" style="background:var(--blue-bg); color:var(--blue);">Enformer-style</span></h4>
+      <p class="desc">All tracks hidden, sequence fully observed. Predict tracks from sequence alone.</p>
+      <div class="mask-row">
+        <div class="label">input_seq_mask</div>
+        <div class="mask-tape"><div class="obs"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">all observed</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">input_track_mask</div>
+        <div class="mask-tape"><div class="mskd"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">all masked</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">output_track_mask</div>
+        <div class="mask-tape"><div class="obs"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">loss everywhere</div>
+      </div>
+    </div>
+
+    <div class="mask-config">
+      <h4>Context-aware fine-tuning <span class="badge" style="background:var(--orange-bg); color:var(--orange);">novel</span></h4>
+      <p class="desc">Sequence fully observed. Tracks visible in the flanks, masked in the central 4 kb window — the same window the model must predict. Forces the model to use long-range context.</p>
+      <div class="mask-row">
+        <div class="label">input_seq_mask</div>
+        <div class="mask-tape"><div class="obs"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">all observed</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">input_track_mask</div>
+        <div class="mask-tape" style="background:#cbd5e1;"><div style="flex:5; background:var(--green);"></div><div style="flex:2; background:#cbd5e1;"></div><div style="flex:5; background:var(--green);"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">center 4 kb hidden</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">output_track_mask</div>
+        <div class="mask-tape" style="background:#cbd5e1;"><div style="flex:5; background:#cbd5e1;"></div><div style="flex:2; background:var(--green);"></div><div style="flex:5; background:#cbd5e1;"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">loss only in center</div>
+      </div>
+    </div>
+
+    <div class="mask-config">
+      <h4>Functional language modeling <span class="badge" style="background:var(--purple-bg); color:var(--purple);">novel</span></h4>
+      <p class="desc">Tracks fully observed, sequence partially masked. The model must reconstruct DNA from surrounding sequence <em>and</em> functional context. A masked-language-model where signal tracks are an auxiliary input.</p>
+      <div class="mask-row">
+        <div class="label">input_seq_mask</div>
+        <div class="mask-tape" style="background:#cbd5e1;"><div style="flex:1; background:var(--green);"></div><div style="flex:1; background:#cbd5e1;"></div><div style="flex:1; background:var(--green);"></div><div style="flex:1; background:#cbd5e1;"></div><div style="flex:1; background:var(--green);"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">~15% positions hidden</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">input_track_mask</div>
+        <div class="mask-tape"><div class="obs"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">all observed</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">output_seq_mask</div>
+        <div class="mask-tape" style="background:#cbd5e1;"><div style="flex:1; background:#cbd5e1;"></div><div style="flex:1; background:var(--green);"></div><div style="flex:1; background:#cbd5e1;"></div><div style="flex:1; background:var(--green);"></div><div style="flex:1; background:#cbd5e1;"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">loss on hidden positions</div>
+      </div>
+    </div>
+
+    <div class="mask-config">
+      <h4>Functional genotyping <span class="badge" style="background:var(--pink-bg); color:var(--pink);">application</span></h4>
+      <p class="desc">Track observed everywhere, sequence masked at a SNP position. Predict the most likely base at the SNP given local ATAC-seq read depth — i.e. recover genotype from chromatin accessibility.</p>
+      <div class="mask-row">
+        <div class="label">input_seq_mask</div>
+        <div class="mask-tape" style="background:var(--green);"><div style="flex:9; background:var(--green);"></div><div style="flex:1; background:#cbd5e1;"></div><div style="flex:9; background:var(--green);"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">SNP positions hidden</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">input_track_mask</div>
+        <div class="mask-tape"><div class="obs"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">all observed</div>
+      </div>
+      <div class="mask-row">
+        <div class="label">output_seq_mask</div>
+        <div class="mask-tape" style="background:#cbd5e1;"><div style="flex:9; background:#cbd5e1;"></div><div style="flex:1; background:var(--green);"></div><div style="flex:9; background:#cbd5e1;"></div></div>
+        <div style="font-size:11px; color:var(--text-muted);">loss at SNP only</div>
+      </div>
+    </div>
+
+    <div class="key-box">
+      <strong>Static vs. dynamic masking.</strong> Sequence-to-function uses a <em>static</em> mask: tracks are always fully hidden. The masked-language-modeling objectives use <em>dynamic</em> masks: each example draws a fresh random subset to hide, so the same locus produces different training signal across epochs. Validation uses fixed masks for reproducibility.
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── LOSS ───────────────────────── -->
+<div class="section alt">
+  <div class="container">
+    <div class="section-label">§ 4 — Losses</div>
+    <h2>Cross-entropy for bases, Poisson for tracks</h2>
+    <p class="lede">Two heads, two losses, one scalar weight to balance them. The output masks decide which positions count.</p>
+
+    <div class="loss-block">
+      <div class="loss-half seq">
+        <h4>Sequence loss — masked cross-entropy</h4>
+        <p>Averaged over positions where (a) the reference is a real base (not "N") and (b) the output sequence mask is 1.</p>
+        <div class="loss-eq">L_seq = seq_weight · Σ CE(o, y) / |unmasked|</div>
+      </div>
+      <div class="loss-half trk">
+        <h4>Track loss — masked Poisson NLL</h4>
+        <p>Predictions are on log scale, so <code>log_input=True</code>. Per-track weights can rescale importance.</p>
+        <div class="loss-eq">L_trk = Σₜ track_weight[t] · PoissonNLL(oₜ, yₜ) · mask</div>
+      </div>
+    </div>
+
+    <div class="code-block"><span class="cb"># the two loss functions, simplified from the paper</span>
+<span class="ck">def</span> <span class="cv">sequence_masked_loss</span>(o, y, mask, seq_weight):
+    <span class="cb"># o, y, mask : B × 4 × L_out</span>
+    per_pos_mask = mask.<span class="cn">any</span>(1) & y.<span class="cn">any</span>(1)   <span class="cb"># positions to score</span>
+    loss = CrossEntropy(o, y.argmax(1), reduction=<span class="cs">"none"</span>)
+    loss[~per_pos_mask] = <span class="cn">0</span>
+    loss = loss.sum(-1) / per_pos_mask.float().mean(-1).clamp_min(1e-6)
+    <span class="ck">return</span> seq_weight * loss.sum()
+
+<span class="ck">def</span> <span class="cv">poisson_masked_loss</span>(o, y, mask, track_weights):
+    <span class="cb"># o, y, mask : B × T × L_out  (o on log scale)</span>
+    loss = poisson_nll_loss(o, y, log_input=<span class="ck">True</span>, reduction=<span class="cs">"none"</span>)
+    loss[~mask] = <span class="cn">0</span>
+    loss = loss.sum(-1) / mask.float().mean(-1).clamp_min(1e-6)
+    <span class="ck">return</span> (loss.sum(0) * track_weights).sum()</div>
+
+    <div class="note-box">
+      <strong>Output clipping matters.</strong> Both predictions and targets are clipped to roughly (−10, ln 5000) before the Poisson loss is evaluated. Without this, a handful of high-coverage outlier positions would dominate training. The <code>log1p</code> input transform plus output clipping is doing a lot of variance-stabilization work that scRNA pipelines would normally handle with arcsinh or per-cell normalization.
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── VARIANTS ───────────────────────── -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">§ 5 — Three model instances trained in the paper</div>
+    <h2>One architecture, three masking recipes</h2>
+    <p class="lede">Each variant is the same code with different hyperparameters and different masks. There is no joint training across all three in the paper, but the discussion explicitly suggests it.</p>
+
+    <div class="variants">
+      <div class="variant v1">
+        <div class="num">1</div>
+        <h3>Context-aware</h3>
+        <div class="figref">Figure 2 · Methods p. 21</div>
+        <ul>
+          <li><code>n_reductions=7</code>, full U-Net</li>
+          <li>196,608 bp in → 4,096 bp / 114,688 bp out</li>
+          <li>12 transformer layers · 8 heads · kernel 7</li>
+          <li>~120M parameters</li>
+          <li>K562 + mouse: 7+4 DNase, 2+3 CAGE BigWigs</li>
+          <li>Pretrain: seq→func. Fine-tune: mask center 4 kb of tracks</li>
+        </ul>
+      </div>
+      <div class="variant v2">
+        <div class="num">2</div>
+        <h3>Functional language model</h3>
+        <div class="figref">Figure 3 · Methods p. 23</div>
+        <ul>
+          <li><code>n_reductions=0</code> — no U-Net</li>
+          <li>Base-resolution conv + transformer</li>
+          <li>1 track: bulk GM12878 DNase (ENCFF093VXI)</li>
+          <li>Train on peaks + GC-matched non-peak regions</li>
+          <li>Splits: chr1 test, chr8/10 val, rest train</li>
+          <li>Compared against a sequence-only baseline of the same architecture</li>
+        </ul>
+      </div>
+      <div class="variant v3">
+        <div class="num">3</div>
+        <h3>Functional genotyping</h3>
+        <div class="figref">Figure 4 · Methods p. 26</div>
+        <ul>
+          <li><code>n_reductions=0</code>, same as #2</li>
+          <li>1 track: bulk GM12878 ATAC-seq (ENCSR637XSC)</li>
+          <li>Tracks built from BAMs via ChromBPNet <code>reads_to_bigwig.py</code></li>
+          <li>Tn5-shifted, base-resolution insertion counts</li>
+          <li>Eval: AFGR ATAC-seq, 100 individuals, 4756 common SNPs</li>
+          <li>Trained on hg38 reference — works on personal genomes without retraining</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── DATA / TRAINING ───────────────────────── -->
+<div class="section alt">
+  <div class="container">
+    <div class="section-label">§ 6 — Data preprocessing</div>
+    <h2>BigWigs in, BigWigs out — every track is bulk</h2>
+    <p class="lede">Nona does <em>no</em> read alignment of its own and consumes no single-cell data. All tracks are bulk, base-resolution BigWigs downloaded already-normalized from ENCODE/FANTOM, except the ATAC track which is built from BAMs using ChromBPNet's helper script.</p>
+
+    <table>
+      <thead><tr><th>Step</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>Reference</td><td>hg38 throughout. Mouse splits inherited from Enformer (assembly not named, but mm10 by inheritance).</td></tr>
+        <tr><td>Read alignment</td><td>None done by the authors. BAMs are downloaded already aligned by ENCODE upstream.</td></tr>
+        <tr><td>BAM → BigWig</td><td>ATAC only. <code>reads_to_bigwig.py</code> (ChromBPNet Docker image, sha256-pinned). Tn5 shift applied. Value at each base = reads starting or ending there.</td></tr>
+        <tr><td>Track resolution</td><td>1 bp throughout. No binning at input. Context-aware outputs are evaluated at 128 bp bins post-hoc to match Enformer.</td></tr>
+        <tr><td>Normalization</td><td>ENCODE's depth normalization → <code>log1p</code> in the data loader → clip to (−10, 8.517) before loss.</td></tr>
+        <tr><td>Augmentation</td><td>50% reverse-complement; coordinate jitter ±J bp drawn uniformly per example.</td></tr>
+        <tr><td>Optimizer</td><td>AdamW, weight decay 0, bfloat16 mixed precision, gradient clip 0.5.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="hp-grid">
+      <div class="hp"><div class="k">channels</div><div class="v">512 (constant width)</div></div>
+      <div class="hp"><div class="k">transformer layers</div><div class="v">12, 8 heads</div></div>
+      <div class="hp"><div class="k">conv kernel</div><div class="v">7</div></div>
+      <div class="hp"><div class="k">positional encoding</div><div class="v">rotary (RoPE)</div></div>
+      <div class="hp"><div class="k">attention</div><div class="v">flash attention (x-transformers)</div></div>
+      <div class="hp"><div class="k">output clip</div><div class="v">(−10, ln 5000) ≈ (−10, 8.517)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────── BIG PICTURE ───────────────────────── -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">§ 7 — What Nona is actually doing</div>
+    <h2>The reframe in one sentence</h2>
+    <p class="lede">Borzoi/Enformer treat tracks as <em>only outputs</em>; Nona treats tracks and sequence symmetrically as a <em>joint observation</em> with arbitrary masks. That single change is what unlocks the other tasks.</p>
+
+    <div class="why-box">
+      <strong>For your scRNA-into-DNA-LM project.</strong> Nona's recipe for "give the model more than just DNA" is: stack co-registered base-resolution tracks as extra input channels, fuse them by summation after a small conv encoder, and train with masking. To extend this to scRNA, the obvious drop-in is to pseudobulk cells by cell-type or by donor and produce one BigWig channel per group — but note that Nona uses a <em>fixed small T</em>. Scaling T into the thousands (per-donor, per-cell-type) is not addressed and would need design work. The MSA-style "vertical attention" approach you mentioned is <em>not</em> what Nona does.
+    </div>
+
+    <div class="note-box">
+      <strong>What's missing for an scRNA extension.</strong> No strandedness for RNA tracks (CAGE is summed unstranded). No splicing / junction representation. No per-individual track stacking. No promoter-enhancer pairing supervision. No normalization beyond depth + log1p. These are the gaps any adaptation would need to fill.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    Built from <code>3.1_nona_alignment_pipeline.md</code> and Nair et al. (bioRxiv 2025.11.06.687036) pp. 17–27. Page refs in the doc.
+  </div>
+</footer>
+
+</body>
+</html>

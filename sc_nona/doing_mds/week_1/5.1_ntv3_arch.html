@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NTv3 Architecture Explorer</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --panel-2: #1d222c;
+    --line: #2a3140;
+    --text: #e6e8ee;
+    --muted: #8a93a6;
+    --dna: #5b8def;
+    --conv: #8a7bf5;
+    --xfmr: #f5a45b;
+    --deconv: #8a7bf5;
+    --head: #5be0a3;
+    --hook: #f5d35b;
+    --track: #ef6b8a;
+    --shape: #aeb6c8;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); margin: 0; padding: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Inter", Helvetica, Arial, sans-serif;
+    font-size: 14px; line-height: 1.45; }
+  a { color: #87b3ff; }
+  code, .mono { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  header {
+    padding: 18px 24px 8px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  header .sub { color: var(--muted); font-size: 12px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 360px 1fr 360px;
+    gap: 16px;
+    padding: 16px 24px 24px 24px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .panel h2 {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px 0; font-weight: 600;
+  }
+
+  .controls .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .controls label { font-size: 12px; color: var(--muted); }
+  .controls .seg {
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  .controls .seg button {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+    font-family: inherit;
+  }
+  .controls .seg button.active {
+    background: #2a3a5e; border-color: #3d5286; color: #cfe0ff;
+  }
+  .controls .checkrow { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; }
+  .controls .checkrow label { color: var(--text); display: flex; gap: 6px; align-items: center; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; font-size: 12px; }
+  .stats .k { color: var(--muted); }
+  .stats .v { color: var(--text); }
+  .stats .v.mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+  .diagram { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr 240px;
+    gap: 12px;
+    align-items: center;
+  }
+  .stage .box {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .stage .box:hover { background: #20263236; }
+  .stage .box .title { font-weight: 600; }
+  .stage .box .desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .stage .box.dna   { border-left-color: var(--dna); }
+  .stage .box.conv  { border-left-color: var(--conv); }
+  .stage .box.xfmr  { border-left-color: var(--xfmr); }
+  .stage .box.deconv{ border-left-color: var(--deconv); }
+  .stage .box.head  { border-left-color: var(--head); }
+  .stage .box.hook  { border-left-color: var(--hook); background: #2b2918; }
+  .stage .box.track { border-left-color: var(--track); background: #2b1a22; }
+
+  .stage .shape {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; color: var(--shape);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px; text-align: center;
+    white-space: nowrap;
+  }
+
+  .arrow {
+    height: 18px;
+    display: grid; grid-template-columns: 1fr 240px; gap: 12px;
+  }
+  .arrow .line {
+    width: 2px; background: var(--line); margin-left: 22px; height: 100%;
+  }
+  .arrow .label {
+    color: var(--muted); font-size: 11px; align-self: center; padding-left: 2px;
+  }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); }
+  .legend .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+  .notes { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .notes p { margin: 6px 0; }
+
+  .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 999px;
+    font-size: 10px; font-family: ui-monospace, Menlo, Consolas, monospace;
+    background: #232a38; color: #cfd6e6; border: 1px solid var(--line);
+    margin-left: 6px;
+  }
+  .tag.hook { background: #3a3210; color: #ffe48a; border-color: #5f5119; }
+  .tag.track { background: #3a1a25; color: #ffb3c5; border-color: #5f2233; }
+  .tag.frozen { background: #1a2a36; color: #aad4ff; border-color: #284158; }
+
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px;
+          background: #1f2632; border: 1px solid var(--line); color: var(--muted);
+          margin-left: 6px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+  .footnote { color: var(--muted); font-size: 11px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>NTv3 Architecture Explorer</h1>
+    <div class="sub">Pretrained checkpoint family · `InstaDeepAI/NTv3_*_pre` · hookable points + Nona-style fusion sites</div>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--dna)"></span>DNA path</span>
+    <span><span class="swatch" style="background:var(--conv)"></span>Conv tower</span>
+    <span><span class="swatch" style="background:var(--xfmr)"></span>Transformer</span>
+    <span><span class="swatch" style="background:var(--head)"></span>Head</span>
+    <span><span class="swatch" style="background:var(--hook)"></span>Hookable</span>
+    <span><span class="swatch" style="background:var(--track)"></span>Track fusion (you add)</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- Left: controls + stats -->
+  <div class="panel controls">
+    <h2>Configuration</h2>
+
+    <div class="row">
+      <label>Model size</label>
+      <div class="seg" id="seg-size">
+        <button data-val="8M">8M_pre</button>
+        <button data-val="100M" class="active">100M_pre</button>
+        <button data-val="650M">650M_pre</button>
+        <button data-val="5DS">5downsample_pre</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Context window (bp)</label>
+      <div class="seg" id="seg-ctx">
+        <button data-val="8192">8 kb</button>
+        <button data-val="32768" class="active">32 kb</button>
+        <button data-val="131072">131 kb</button>
+        <button data-val="1048576">1 Mb</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Show track-fusion options</label>
+      <div class="checkrow">
+        <label><input type="checkbox" id="cb-nona" checked> Nona-style parallel encoder</label>
+        <label><input type="checkbox" id="cb-film"> FiLM at every transformer block</label>
+        <label><input type="checkbox" id="cb-addemb"> Additive embedding (approach B)</label>
+      </div>
+    </div>
+
+    <h2 style="margin-top:6px">Resolved spec</h2>
+    <div class="stats" id="stats"></div>
+
+    <p class="footnote" style="margin-top:10px">
+      L<sub>compressed</sub> = L / 2<sup>n_downsamples</sup>. 7-downsample variants compress by 128×; the 5-downsample variant by 32×.
+      Input length must be divisible by 2<sup>n_downsamples</sup>.
+    </p>
+  </div>
+
+  <!-- Middle: diagram -->
+  <div class="panel">
+    <h2>Forward pass</h2>
+    <div class="diagram" id="diagram"></div>
+
+    <div class="notes" id="notes"></div>
+  </div>
+
+  <!-- Right: callouts -->
+  <div class="panel">
+    <h2>Where you can inject conditioning</h2>
+    <div id="hooks"></div>
+
+    <h2 style="margin-top:16px">Sources</h2>
+    <ul class="footnote" style="padding-left:18px; margin:0;">
+      <li><a href="https://huggingface.co/collections/InstaDeepAI/nucleotide-transformer-v3" target="_blank" rel="noopener">HF collection — NTv3</a></li>
+      <li><a href="https://huggingface.co/InstaDeepAI/NTv3_100M_pre" target="_blank" rel="noopener">NTv3_100M_pre model card</a></li>
+      <li><a href="https://www.biorxiv.org/content/10.64898/2025.12.22.695963v1" target="_blank" rel="noopener">NTv3 paper (bioRxiv)</a></li>
+      <li><a href="https://github.com/instadeepai/nucleotide-transformer" target="_blank" rel="noopener">InstaDeepAI/nucleotide-transformer</a></li>
+      <li>Project doc: <code>planning_mds/6_quickest_ntv3_prototype_path.md</code></li>
+    </ul>
+  </div>
+</div>
+
+<script>
+  // ─── Model size specs (from NTv3 model cards) ───
+  const SIZES = {
+    "8M":   { params: "7.7M",  hidden: 256,  ffn: 1024, heads: 8,  layers: 2,  downsamples: 7, embed: 16 },
+    "100M": { params: "100M",  hidden: 768,  ffn: 3072, heads: 12, layers: 6,  downsamples: 7, embed: 16 },
+    "650M": { params: "700M",  hidden: 1536, ffn: 6144, heads: 24, layers: 12, downsamples: 7, embed: 16 },
+    "5DS":  { params: "~600M", hidden: 1536, ffn: 6144, heads: 24, layers: 12, downsamples: 5, embed: 16 },
+  };
+
+  const state = { size: "100M", ctx: 32768, nona: true, film: false, addemb: false };
+
+  function fmt(n) { return n.toLocaleString("en-US"); }
+  function shape(parts) { return "(B, " + parts.join(", ") + ")"; }
+
+  function compute() {
+    const s = SIZES[state.size];
+    const factor = Math.pow(2, s.downsamples);
+    const valid = state.ctx % factor === 0;
+    const Lc = Math.floor(state.ctx / factor);
+    return { s, factor, Lc, valid };
+  }
+
+  function renderStats() {
+    const { s, factor, Lc, valid } = compute();
+    const el = document.getElementById("stats");
+    el.innerHTML = `
+      <div class="k">Params</div><div class="v mono">${s.params}</div>
+      <div class="k">Hidden dim</div><div class="v mono">${s.hidden}</div>
+      <div class="k">FFN dim</div><div class="v mono">${s.ffn}</div>
+      <div class="k">Heads</div><div class="v mono">${s.heads}</div>
+      <div class="k">Transformer layers</div><div class="v mono">${s.layers}</div>
+      <div class="k">Downsamples</div><div class="v mono">${s.downsamples} (×${factor} compression)</div>
+      <div class="k">Token embed dim</div><div class="v mono">${s.embed}</div>
+      <div class="k">L (input)</div><div class="v mono">${fmt(state.ctx)} bp</div>
+      <div class="k">L<sub>compressed</sub></div><div class="v mono">${fmt(Lc)} tokens${valid ? "" : "  ⚠ not divisible"}</div>
+      <div class="k">bp per interior token</div><div class="v mono">${factor} bp</div>
+    `;
+  }
+
+  function box(cls, title, desc, tags = []) {
+    const tagHtml = tags.map(t => `<span class="tag ${t.cls||''}">${t.text}</span>`).join("");
+    return `
+      <div class="box ${cls}">
+        <div>
+          <div class="title">${title}${tagHtml}</div>
+          ${desc ? `<div class="desc">${desc}</div>` : ""}
+        </div>
+      </div>`;
+  }
+
+  function stage(boxHtml, shapeStr) {
+    return `<div class="stage">${boxHtml}<div class="shape">${shapeStr}</div></div>`;
+  }
+
+  function arrow(label = "") {
+    return `<div class="arrow"><div class="line"></div><div class="label">${label}</div></div>`;
+  }
+
+  function renderDiagram() {
+    const { s, Lc } = compute();
+    const L = state.ctx;
+
+    const rows = [];
+
+    // 1. input_ids
+    rows.push(stage(
+      box("dna", "input_ids", "DNA tokens, vocab = 11 (A T C G N + specials)", [{text:"frozen", cls:"frozen"}]),
+      shape([fmt(L)])
+    ));
+    rows.push(arrow("Embedding(V=11, D=" + s.embed + ")"));
+
+    // 2. Token embeddings
+    const addembTag = state.addemb ? [{text:"+ RNA add (approach B)", cls:"track"}] : [];
+    rows.push(stage(
+      box(state.addemb ? "track" : "dna", "Token embeddings",
+          "Lookup into a tiny 16-dim table. Cheap; this is the narrowest part of the network.",
+          addembTag),
+      shape([fmt(L), s.embed])
+    ));
+    if (state.addemb) {
+      rows.push(arrow("× zero-init Linear(50 → 16) on tracks · add"));
+    } else {
+      rows.push(arrow("Stem · Conv1d(k=15, " + s.embed + " → " + s.hidden + ")"));
+    }
+    if (state.addemb) {
+      rows.push(arrow("Stem · Conv1d(k=15, " + s.embed + " → " + s.hidden + ")"));
+    }
+
+    // 3. Post-stem
+    rows.push(stage(
+      box("conv", "Post-stem", "Single conv lifts embed_dim → hidden_dim. After this, everything runs at hidden_dim.",
+          [{text:"hook point", cls:"hook"}]),
+      shape([fmt(L), s.hidden])
+    ));
+
+    // ConvTower
+    rows.push(arrow("ConvTower · " + s.downsamples + "× [ConvBlock → ResidualConvBlock → avg_pool(2)] · residuals saved"));
+    rows.push(stage(
+      box("conv", "Conv tower output", `Sequence compressed ${Math.pow(2,s.downsamples)}× via ${s.downsamples} downsample stages. Residuals saved for the deconv U-net skip.`,
+          [{text:"hook point", cls:"hook"}]),
+      shape([fmt(Lc), s.hidden])
+    ));
+
+    // Nona fusion
+    if (state.nona) {
+      rows.push(arrow("Nona-style: + parallel track encoder output"));
+      rows.push(stage(
+        box("track",
+            "Track encoder (you build)",
+            `Mirror of NTv3's conv tower for tracks. Simplest v0: <code>Conv1d(T, ${s.hidden}, kernel=${Math.pow(2,s.downsamples)}, stride=${Math.pow(2,s.downsamples)})</code>. T = number of scRNA tracks (e.g. ~50).`,
+            [{text:"trainable", cls:"track"}]),
+        shape([fmt(Lc), s.hidden]) + "  ← (B, " + fmt(L) + ", T) in"
+      ));
+      rows.push(arrow("sum · pre-hook on transformer block 0"));
+    } else {
+      rows.push(arrow("→ transformer entry"));
+    }
+
+    // Transformer block
+    for (let i = 0; i < s.layers; i++) {
+      const filmTag = state.film ? [{text:"FiLM", cls:"track"}] : [];
+      rows.push(stage(
+        box(state.film ? "track" : "xfmr",
+            "Transformer block " + (i + 1),
+            "MHA (RoPE, " + s.heads + " heads) + GLU-FFN (" + s.ffn + "). Pre-LN.",
+            filmTag),
+        shape([fmt(Lc), s.hidden])
+      ));
+      if (i < s.layers - 1) rows.push(arrow(""));
+    }
+
+    rows.push(arrow("DeconvTower · " + s.downsamples + "× [DeConvBlock → ResidualDeConvBlock] with x += residuals[level]"));
+    rows.push(stage(
+      box("deconv", "Deconv tower output", "Back to base resolution via U-Net skips from the conv tower.",
+          [{text:"hook point", cls:"hook"}]),
+      shape([fmt(L), s.hidden])
+    ));
+    rows.push(arrow("LM head · stacked Linear+GELU"));
+    rows.push(stage(
+      box("head", "MLM logits", "Per-bp prediction over 11-token vocab. Loss = cross-entropy on masked positions."),
+      shape([fmt(L), 11])
+    ));
+
+    document.getElementById("diagram").innerHTML = rows.join("\n");
+  }
+
+  function renderHooks() {
+    const { s } = compute();
+    const items = [];
+
+    items.push(`
+      <p><span class="tag track">Nona-style</span> <b>Parallel track encoder → sum before transformer.</b><br>
+      Build a track-side conv encoder that downsamples <code>(L, T)</code> to <code>(L/${Math.pow(2,s.downsamples)}, ${s.hidden})</code>, then add to the conv-tower output via a forward-pre-hook on the first transformer block.
+      <span class="pill">~300 LOC</span></p>
+    `);
+
+    items.push(`
+      <p><span class="tag hook">Approach B</span> <b>Additive embedding (zero-init).</b><br>
+      <code>tok_emb + Linear(T → ${s.embed})(tracks)</code> via <code>inputs_embeds=</code> or a hook on <code>get_input_embeddings()</code>. Narrow (${s.embed}-dim) but smallest footprint.
+      <span class="pill">~50 LOC</span></p>
+    `);
+
+    items.push(`
+      <p><span class="tag track">Approach C</span> <b>FiLM at every block.</b><br>
+      Wrap each transformer-block <code>LayerNorm</code> with <code>x * (1 + γ(c)) + β(c)</code> where <code>c</code> is your tracks at compressed resolution. The adaptive-LN scaffolding exists in NTv3's source but it was designed for <i>global</i> species conditioning — you have to extend it to per-position.
+      <span class="pill">~200 LOC</span></p>
+    `);
+
+    items.push(`
+      <p><span class="tag">Output side</span> <b>Track-prediction head off the deconv output.</b><br>
+      <code>Linear(${s.hidden}, T)</code> on the post-deconv tensor, Poisson NLL on log1p coverage. This is what Nona does and what scooby does (with cell embeddings instead of fixed channels).</p>
+    `);
+
+    items.push(`
+      <p class="footnote">All injection points are hookable without modifying NTv3 source: register pre/post hooks on <code>model.get_input_embeddings()</code>, <code>model.core.stem</code>, <code>model.core.conv_tower</code>, and the first transformer block. The model card promises <code>embeddings_layers_to_save</code> / <code>deconv_layers_to_save</code> APIs for read access; for write access you use standard PyTorch hooks.</p>
+    `);
+
+    document.getElementById("hooks").innerHTML = items.join("");
+  }
+
+  function renderNotes() {
+    const { s, factor, Lc, valid } = compute();
+    const lines = [];
+    if (!valid) {
+      lines.push(`<p>⚠ <b>${fmt(state.ctx)}</b> is not divisible by 2<sup>${s.downsamples}</sup> = ${factor}. NTv3 will reject this input length. Pad to a multiple of ${factor}.</p>`);
+    }
+    if (state.size === "5DS") {
+      lines.push(`<p>The 5-downsample variant compresses by 32× instead of 128×. Transformer interior is at <b>32 bp/token</b>, matching Borzoi's output binning. Good if you want fine-grained per-position track signal at the transformer.</p>`);
+    } else {
+      lines.push(`<p>Transformer interior is at <b>128 bp/token</b> for the 7-downsample variants. This matches Enformer's binning. Bin your scRNA coverage to 128 bp for clean alignment at the transformer entry.</p>`);
+    }
+    lines.push(`<p>Pretrained MLM only: the <code>_pre</code> checkpoint has no track heads and no species conditioning. The adaptive-LN code is present but unused. Starting from <code>_pre</code> means you own the conditioning channel.</p>`);
+    document.getElementById("notes").innerHTML = lines.join("");
+  }
+
+  function render() {
+    renderStats();
+    renderDiagram();
+    renderNotes();
+    renderHooks();
+  }
+
+  // Wire controls
+  function bindSeg(id, key, cast = (v)=>v) {
+    document.querySelectorAll(`#${id} button`).forEach(b => {
+      b.addEventListener("click", () => {
+        document.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove("active"));
+        b.classList.add("active");
+        state[key] = cast(b.dataset.val);
+        render();
+      });
+    });
+  }
+  bindSeg("seg-size", "size");
+  bindSeg("seg-ctx", "ctx", (v) => parseInt(v, 10));
+
+  document.getElementById("cb-nona").addEventListener("change", e => { state.nona = e.target.checked; render(); });
+  document.getElementById("cb-film").addEventListener("change", e => { state.film = e.target.checked; render(); });
+  document.getElementById("cb-addemb").addEventListener("change", e => { state.addemb = e.target.checked; render(); });
+
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuomo Smart-seq2 → N-masked BigWig Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green:   #16a34a;
+    --green-bg:#f0fdf4;
+    --green-border:#bbf7d0;
+    --blue:    #2563eb;
+    --blue-bg: #eff6ff;
+    --blue-border:#bfdbfe;
+    --orange:  #d97706;
+    --orange-bg:#fffbeb;
+    --orange-border:#fde68a;
+    --purple:  #7c3aed;
+    --purple-bg:#f5f3ff;
+    --purple-border:#ddd6fe;
+    --red:     #dc2626;
+    --red-bg:  #fef2f2;
+    --red-border:#fecaca;
+    --gray:    #374151;
+    --gray-light:#f9fafb;
+    --gray-border:#e5e7eb;
+    --text:    #111827;
+    --text-muted:#6b7280;
+    --code-bg: #0f172a;
+    --code-text:#e2e8f0;
+    --surface: #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    background: #f8fafc;
+    line-height: 1.6;
+  }
+
+  .page-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    color: white;
+    padding: 52px 40px 44px;
+  }
+  .page-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+  .page-header p { font-size: 16px; opacity: 0.8; max-width: 720px; }
+
+  .stat-row {
+    display: flex; gap: 24px; margin-top: 28px; flex-wrap: wrap;
+  }
+  .stat { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px 20px; }
+  .stat .num { font-size: 22px; font-weight: 700; }
+  .stat .lbl { font-size: 12px; opacity: 0.7; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .container { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+
+  /* pipeline flow */
+  .pipeline-section {
+    background: white;
+    border-bottom: 1px solid var(--gray-border);
+    padding: 40px 0;
+  }
+  .pipeline-title {
+    font-size: 13px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 24px;
+  }
+  .flow {
+    display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+  }
+  .flow-node {
+    background: var(--blue-bg); border: 1.5px solid var(--blue-border);
+    border-radius: 10px; padding: 12px 18px; text-align: center; min-width: 110px;
+  }
+  .flow-node .icon { font-size: 22px; margin-bottom: 4px; }
+  .flow-node .name { font-size: 12px; font-weight: 600; color: var(--blue); }
+  .flow-node .type { font-size: 11px; color: var(--text-muted); }
+  .flow-node.green { background: var(--green-bg); border-color: var(--green-border); }
+  .flow-node.green .name { color: var(--green); }
+  .flow-node.purple { background: var(--purple-bg); border-color: var(--purple-border); }
+  .flow-node.purple .name { color: var(--purple); }
+  .flow-node.output { background: #fef9c3; border-color: #fde047; }
+  .flow-node.output .name { color: #854d0e; }
+  .flow-arrow {
+    color: var(--text-muted); font-size: 20px; padding: 0 6px; flex-shrink: 0;
+  }
+
+  /* steps */
+  .step-section {
+    padding: 48px 0 32px;
+    border-bottom: 1px solid var(--gray-border);
+  }
+  .step-label {
+    display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px;
+  }
+  .step-num {
+    background: var(--blue); color: white;
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+  .step-num.green { background: var(--green); }
+  .step-num.purple { background: var(--purple); }
+  .step-num.orange { background: var(--orange); }
+  .step-title { font-size: 22px; font-weight: 700; }
+
+  p { margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  .why-box {
+    background: var(--blue-bg); border-left: 3px solid var(--blue);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 18px 0;
+    font-size: 14px;
+  }
+  .why-box strong { color: var(--blue); }
+
+  .note-box {
+    background: var(--orange-bg); border-left: 3px solid var(--orange);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 18px 0;
+    font-size: 14px;
+  }
+  .note-box strong { color: var(--orange); }
+
+  .key-box {
+    background: var(--purple-bg); border-left: 3px solid var(--purple);
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 18px 0;
+    font-size: 14px;
+  }
+  .key-box strong { color: var(--purple); }
+
+  /* file preview cards */
+  .file-card {
+    border: 1.5px solid var(--gray-border);
+    border-radius: 12px; overflow: hidden; margin: 20px 0;
+  }
+  .file-card-header {
+    background: var(--gray-light); padding: 10px 16px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--gray-border);
+  }
+  .file-card-header .filename {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500;
+    color: var(--text);
+  }
+  .file-card-header .badge {
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .badge-tsv { background: #dbeafe; color: #1d4ed8; }
+  .badge-fa  { background: #dcfce7; color: #15803d; }
+  .badge-vcf { background: #ede9fe; color: #6d28d9; }
+  .badge-gtf { background: #fef9c3; color: #854d0e; }
+  .badge-fq  { background: #fee2e2; color: #b91c1c; }
+  .badge-sam { background: #ffedd5; color: #c2410c; }
+  .badge-bw  { background: #f0abfc; color: #7e22ce; }
+  .badge-bin { background: #e5e7eb; color: #374151; }
+
+  .file-content {
+    background: var(--code-bg); padding: 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    line-height: 1.7; color: var(--code-text);
+    overflow-x: auto;
+  }
+  .file-content .comment { color: #64748b; }
+  .file-content .hl-green { color: #86efac; }
+  .file-content .hl-blue  { color: #93c5fd; }
+  .file-content .hl-yellow{ color: #fde047; }
+  .file-content .hl-red   { color: #fca5a5; }
+  .file-content .hl-purple{ color: #d8b4fe; }
+  .file-content .hl-orange{ color: #fdba74; }
+  .file-content .hl-muted { color: #475569; }
+
+  /* code block */
+  .code-block {
+    background: var(--code-bg); border-radius: 10px; padding: 18px 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    line-height: 1.7; color: var(--code-text);
+    overflow-x: auto; margin: 18px 0;
+  }
+  .code-block .cb { color: #64748b; }
+  .code-block .ck { color: #93c5fd; }
+  .code-block .cv { color: #86efac; }
+  .code-block .cs { color: #fde047; }
+
+  /* concept explainer */
+  .concept-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0;
+  }
+  .concept-card {
+    background: white; border: 1.5px solid var(--gray-border);
+    border-radius: 10px; padding: 18px;
+  }
+  .concept-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .concept-card p  { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* visual diagram */
+  .diagram {
+    background: white; border: 1.5px solid var(--gray-border);
+    border-radius: 12px; padding: 24px; margin: 20px 0; overflow-x: auto;
+  }
+  .diagram pre {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    line-height: 1.7; color: var(--text);
+  }
+
+  /* substep */
+  .substep {
+    margin-top: 32px; padding-top: 24px;
+    border-top: 1px dashed var(--gray-border);
+  }
+  .substep:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+  .substep h3 {
+    font-size: 16px; font-weight: 600; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .substep-tag {
+    font-size: 11px; font-weight: 600; padding: 2px 8px;
+    border-radius: 4px; background: var(--gray-light);
+    color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* coverage viz */
+  .coverage-viz {
+    background: var(--code-bg); border-radius: 10px; padding: 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--code-text); margin: 18px 0; overflow-x: auto;
+  }
+
+  /* training pairing */
+  .training-pair {
+    display: flex; gap: 12px; margin: 20px 0; align-items: stretch;
+  }
+  .training-seq {
+    flex: 1; background: var(--blue-bg); border: 1.5px solid var(--blue-border);
+    border-radius: 10px; padding: 16px;
+  }
+  .training-cov {
+    flex: 1; background: var(--green-bg); border: 1.5px solid var(--green-border);
+    border-radius: 10px; padding: 16px;
+  }
+  .training-arrow {
+    display: flex; align-items: center; font-size: 24px; color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .training-seq h4 { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 10px; }
+  .training-cov h4 { font-size: 13px; font-weight: 600; color: var(--green); margin-bottom: 10px; }
+  .training-seq pre, .training-cov pre {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    line-height: 1.6; color: var(--text);
+  }
+
+  /* summary table */
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+  th { background: var(--gray-light); font-weight: 600; text-align: left; padding: 10px 14px; border-bottom: 2px solid var(--gray-border); }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--gray-border); }
+  tr:last-child td { border-bottom: none; }
+  td code, th code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--gray-light); padding: 1px 5px; border-radius: 4px; }
+
+  footer { padding: 40px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+  @media (max-width: 640px) {
+    .concept-grid { grid-template-columns: 1fr; }
+    .training-pair { flex-direction: column; }
+    .training-arrow { transform: rotate(90deg); }
+    .flow { gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="container">
+    <h1>Smart-seq2 → N-masked BigWig Pipeline</h1>
+    <p>Aligning single-cell RNA-seq reads to per-donor N-masked personalized references with WASP bias correction and SNPsplit haplotype splitting, producing per-cell base-pair coverage BigWigs for DNA language model training.</p>
+    <div class="stat-row">
+      <div class="stat"><div class="num">104</div><div class="lbl">open-access donors</div></div>
+      <div class="stat"><div class="num">~36K</div><div class="lbl">cells (Smart-seq2)</div></div>
+      <div class="stat"><div class="num">~40 GB</div><div class="lbl">total download</div></div>
+      <div class="stat"><div class="num">3×</div><div class="lbl">BigWigs per cell (h1, h2, diploid)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PIPELINE OVERVIEW ── -->
+<div class="pipeline-section">
+  <div class="container">
+    <div class="pipeline-title">Full pipeline at a glance</div>
+    <div class="flow">
+      <div class="flow-node">
+        <div class="icon">📋</div>
+        <div class="name">Metadata</div>
+        <div class="type">.tsv</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="icon">🧬</div>
+        <div class="name">CRAMs</div>
+        <div class="type">binary reads</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">
+        <div class="icon">🔤</div>
+        <div class="name">FASTQs</div>
+        <div class="type">raw reads</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node purple">
+        <div class="icon">🧬</div>
+        <div class="name">N-masked FASTA</div>
+        <div class="type">+ SNPsplit input</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node purple">
+        <div class="icon">📑</div>
+        <div class="name">STAR index</div>
+        <div class="type">per donor</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node green">
+        <div class="icon">🗺️</div>
+        <div class="name">BAM</div>
+        <div class="type">aligned reads</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node output">
+        <div class="icon">📊</div>
+        <div class="name">BigWig</div>
+        <div class="type">h1.bw + h2.bw</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     STEP 1: METADATA
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num">1</div>
+      <div class="step-title">Download metadata</div>
+    </div>
+
+    <p>Before downloading anything large, we grab two small files that tell us which cells exist and how to find them. The whole pipeline is organized around grouping cells by donor — every cell from the same donor gets aligned to that donor's personalized genome.</p>
+
+    <div class="substep">
+      <h3>Cell metadata <span class="substep-tag">Zenodo 3625024 · 41 MB</span></h3>
+      <p>This file maps every cell ID to its donor, time point, and experiment. It's the central index for the dataset.</p>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">cell_metadata_cols.tsv</span>
+          <span class="badge badge-tsv">TSV</span>
+        </div>
+        <div class="file-content">
+<span class="hl-blue">cell_id        donor                  time_point  experiment  plate</span>
+<span class="hl-muted">─────────────────────────────────────────────────────────────────────────</span>
+<span class="hl-green">19776_1#1</span>      HPSI0114i-bezi_1       day0        run_19776   19776_1
+<span class="hl-green">19776_1#2</span>      HPSI0114i-bezi_1       day0        run_19776   19776_1
+<span class="hl-green">19776_2#1</span>      HPSI0114i-lexy_2       day0        run_19776   19776_2
+<span class="hl-green">19776_2#3</span>      HPSI0114i-lexy_2       day3        run_19776   19776_2
+<span class="hl-green">19780_1#1</span>      HPSI0413i-sojd_3       day1        run_19780   19780_1
+<span class="comment">... 36,044 rows total</span>
+        </div>
+      </div>
+
+      <p>The <code>cell_id</code> column is the key: it links to ENA run accessions (next file). The <code>donor</code> column contains the full HipSci line name like <code>HPSI0114i-bezi_1</code> — we extract the short name (<code>bezi</code>) to check against the 21 managed-access donors.</p>
+    </div>
+
+    <div class="substep">
+      <h3>ENA CRAM manifest <span class="substep-tag">ENA API · &lt;1 MB</span></h3>
+      <p>This file maps every cell's accession number to its download URL on ENA's servers.</p>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">ena_cram_manifest.tsv</span>
+          <span class="badge badge-tsv">TSV</span>
+        </div>
+        <div class="file-content">
+<span class="hl-blue">run_accession  library_name  submitted_ftp</span>
+<span class="hl-muted">──────────────────────────────────────────────────────────────────────────────────────────────</span>
+ERR1209149     <span class="hl-green">19776_1#1</span>     ftp.sra.ebi.ac.uk/.../19776_1#1.cram<span class="hl-yellow">;</span>ftp.sra.ebi.ac.uk/.../19776_1#1.cram.crai
+ERR1209150     <span class="hl-green">19776_1#2</span>     ftp.sra.ebi.ac.uk/.../19776_1#2.cram<span class="hl-yellow">;</span>ftp.sra.ebi.ac.uk/.../19776_1#2.cram.crai
+ERR1209151     <span class="hl-green">19776_2#1</span>     ftp.sra.ebi.ac.uk/.../19776_2#1.cram<span class="hl-yellow">;</span>ftp.sra.ebi.ac.uk/.../19776_2#1.cram.crai
+<span class="comment">... 46,468 rows total</span>
+        </div>
+      </div>
+
+      <p>The <code>library_name</code> column matches <code>cell_id</code> in the cell metadata, giving us the join. The <code>submitted_ftp</code> column has two semicolon-separated URLs per row: the CRAM file itself and its index (.crai).</p>
+    </div>
+
+    <div class="why-box">
+      <strong>Why group by donor?</strong> Each donor gets their own N-masked personalized reference genome. A cell from donor <em>bezi</em> must be aligned to <em>bezi</em>'s FASTA (with <em>bezi</em>'s het sites N-masked and WASP VCF), not <em>lexy</em>'s. The metadata tells us which cells belong to which donor.
+    </div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     STEP 2: REFERENCE FILES
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num">2</div>
+      <div class="step-title">Download reference files</div>
+    </div>
+
+    <div class="substep">
+      <h3>hs37d5 reference genome <span class="substep-tag">HipSci FTP · ~3 GB</span></h3>
+      <p>A FASTA file is the simplest possible genome format: a header line starting with <code>&gt;</code> giving the chromosome name, followed by lines of the DNA sequence.</p>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">hs37d5.fa</span>
+          <span class="badge badge-fa">FASTA</span>
+        </div>
+        <div class="file-content">
+<span class="hl-yellow">&gt;1</span>   <span class="comment">← chromosome 1 (GRCh37 uses numbers, not "chr1")</span>
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+TAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT
+TAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT
+GCGCGAAAGCGCTCAGGCGCGAAAACGCCTAACCC<span class="hl-green">A</span>AACCC<span class="hl-green">A</span>AACCC
+<span class="comment">... 249,250,621 bases for chr1 alone</span>
+<span class="comment">... file continues through chr2, chr3, ... chrX, chrY, MT, decoys</span>
+<span class="comment">... total: ~3.2 GB uncompressed</span>
+
+<span class="hl-yellow">&gt;2</span>
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+<span class="comment">...</span>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong>Why hs37d5 specifically?</strong> The CRAMs from ENA were compressed against this exact reference genome. CRAM is a format that stores only the <em>differences</em> from a reference, so you need the identical reference to reconstruct the original reads. Using a different genome (even GRCh38) would produce corrupted output.
+      </div>
+    </div>
+
+    <div class="substep">
+      <h3>GENCODE v19 gene annotation <span class="substep-tag">GENCODE · 35 MB</span></h3>
+      <p>A GTF (Gene Transfer Format) file lists the coordinates of every known gene, transcript, and exon. STAR reads this to know where splice junctions are, so it can correctly align reads that span exon-exon junctions.</p>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">gencode.v19.annotation.gtf</span>
+          <span class="badge badge-gtf">GTF</span>
+        </div>
+        <div class="file-content">
+<span class="comment"># Each row is one feature. Columns: chr, source, type, start, end, score, strand, frame, attributes</span>
+<span class="hl-blue">1</span>  HAVANA  <span class="hl-green">gene</span>        11869  14412  .  <span class="hl-yellow">+</span>  .  <span class="hl-purple">gene_id "ENSG00000223972.4"; gene_name "DDX11L1";</span>
+<span class="hl-blue">1</span>  HAVANA  <span class="hl-green">transcript</span>  11869  14409  .  <span class="hl-yellow">+</span>  .  <span class="hl-purple">gene_id "ENSG00000223972.4"; transcript_id "ENST00000456328.2";</span>
+<span class="hl-blue">1</span>  HAVANA  <span class="hl-green">exon</span>        11869  12227  .  <span class="hl-yellow">+</span>  .  <span class="hl-purple">exon_id "ENSE00002234944.1"; exon_number "1";</span>
+<span class="hl-blue">1</span>  HAVANA  <span class="hl-green">exon</span>        12613  12721  .  <span class="hl-yellow">+</span>  .  <span class="hl-purple">exon_id "ENSE00003582793.1"; exon_number "2";</span>
+<span class="hl-blue">1</span>  HAVANA  <span class="hl-green">exon</span>        13221  14409  .  <span class="hl-yellow">+</span>  .  <span class="hl-purple">exon_id "ENSE00002312635.1"; exon_number "3";</span>
+<span class="comment">... ~2.3M rows for all genes/transcripts/exons</span>
+        </div>
+      </div>
+
+      <p>The exon rows are what matter most. STAR uses exon boundaries to know where it's valid for a read to "jump" — if a 75 bp read starts in exon 1 and ends in exon 2, STAR needs to know that the gap between them (the intron) is a legitimate splice junction, not a sequencing error.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     STEP 3: GENOTYPES + DIPLOID FASTAs
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num purple">3</div>
+      <div class="step-title">Build per-donor N-masked FASTA <em style="font-size:15px;font-weight:400;color:var(--text-muted)">(the key step)</em></div>
+    </div>
+
+    <p>This is what makes this pipeline different from a standard RNA-seq alignment. Instead of aligning all 36,000 cells to the same reference genome, each donor gets their own personalized reference built from their actual genetic variants. We use an <strong>N-masked</strong> single FASTA rather than two separate haplotype FASTAs — heterozygous positions are replaced with <code>N</code> so the aligner cannot favour either allele. Haplotype splitting happens later with SNPsplit after alignment.</p>
+
+    <div class="substep">
+      <h3>Download imputed joint BCF <span class="substep-tag">HipSci FTP · ~6 GB</span></h3>
+
+      <p>A BCF is a binary VCF — the standard format for listing genetic variants. A VCF (Variant Call Format) file has one row per variant, recording what the DNA looks like at that position for each sample. The critical feature here is <strong>phasing</strong>.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <h4>🔀 Unphased genotype: <code>0/1</code></h4>
+          <p>We know this person is heterozygous (has one reference allele and one alternate allele) but we don't know <em>which chromosome copy</em> has which allele. The slash <code>/</code> means "order unknown".</p>
+        </div>
+        <div class="concept-card">
+          <h4>✅ Phased genotype: <code>0|1</code></h4>
+          <p>The pipe <code>|</code> means the order matters. The left allele (<code>0</code> = reference) is on haplotype 1; the right allele (<code>1</code> = alternate) is on haplotype 2. We know which chromosome copy has which allele.</p>
+        </div>
+      </div>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">chr1.bcf → per_donor/HPSI0114i-bezi_1.vcf.gz (after extraction)</span>
+          <span class="badge badge-vcf">VCF</span>
+        </div>
+        <div class="file-content">
+<span class="comment">##fileformat=VCFv4.1</span>
+<span class="comment">##reference=hs37d5</span>
+<span class="comment">##phasing=SHAPEIT2</span>
+<span class="comment">##FORMAT=&lt;ID=GT,Type=String,Description="Phased Genotype"&gt;</span>
+<span class="comment">##FORMAT=&lt;ID=GP,Type=Float,Description="Genotype Probabilities"&gt;</span>
+<span class="hl-blue">#CHROM  POS     ID  REF  ALT  QUAL  FILTER  INFO  FORMAT  HPSI0114i-bezi_1</span>
+<span class="hl-muted">──────────────────────────────────────────────────────────────────────────</span>
+1       752566  .   <span class="hl-green">A</span>    <span class="hl-red">G</span>    .     PASS    .     GT:GP   <span class="hl-yellow">0|1</span>:0.01,0.98,0.01
+<span class="comment">                                                        ↑↑↑</span>
+<span class="comment">                                          hap1=REF(A), hap2=ALT(G)</span>
+1       754192  .   <span class="hl-green">C</span>    <span class="hl-red">T</span>    .     PASS    .     GT:GP   <span class="hl-yellow">1|0</span>:0.00,0.99,0.01
+<span class="comment">                                                        ↑↑↑</span>
+<span class="comment">                                          hap1=ALT(T), hap2=REF(C)</span>
+1       768116  .   <span class="hl-green">C</span>    <span class="hl-red">A</span>    .     PASS    .     GT:GP   <span class="hl-yellow">1|1</span>:0.00,0.00,1.00
+<span class="comment">                                          homozygous alt — same on both haplotypes</span>
+1       810000  .   <span class="hl-green">ACGT</span> <span class="hl-red">A</span>   .     PASS    .     GT:GP   <span class="hl-yellow">0|1</span>:0.01,0.97,0.02
+<span class="comment">                                          ← an indel: 3bp deletion on haplotype 2</span>
+<span class="comment">... ~6–10 million variants per donor across all chromosomes</span>
+        </div>
+      </div>
+
+      <div class="key-box">
+        <strong>Why phasing matters:</strong> Without phasing, we can't build two separate haplotype sequences — we'd know <em>what</em> variants exist but not <em>which chromosome copy</em> each belongs to. The HipSci BCFs are phased using SHAPEIT2, which gives us the <code>|</code>-separated genotypes that let us build hap1 and hap2 separately.
+      </div>
+    </div>
+
+    <div class="substep">
+      <h3>Build N-masked FASTA with <code>bcftools consensus</code> + <code>bedtools maskfasta</code></h3>
+
+      <p>We build a single personalized reference FASTA in two passes, then prepare a SNPsplit input file for later haplotype splitting.</p>
+
+      <div class="diagram">
+        <pre>
+Reference (GRCh37):  ...ACGTACG<span style="color:#dc2626;font-weight:700">A</span>TACGTACG<span style="color:#dc2626;font-weight:700">C</span>TACGT...
+                                ↑ pos 752566    ↑ pos 754192
+Variant at 752566:  1|1  (homozygous alt = G on both copies)
+Variant at 754192:  0|1  (heterozygous: hap1=REF=C, hap2=ALT=T)
+
+Pass 1 — apply hom-alt SNPs (donor agrees on both copies):
+After:   ...ACGTACG<span style="color:#16a34a;font-weight:700">G</span>TACGTACG<span style="color:#dc2626;font-weight:700">C</span>TACGT...   ← 752566 substituted to G
+
+Pass 2 — N-mask het SNPs (donor's two copies disagree):
+After:   ...ACGTACG<span style="color:#16a34a;font-weight:700">G</span>TACGTACG<span style="color:#fde047;font-weight:700">N</span>TACGT...   ← 754192 replaced with N
+
+The aligner now:  • at pos 752566: sees G — correctly matches reads with alt allele
+                  • at pos 754192: sees N — accepts any base equally (no allele preference)
+        </pre>
+      </div>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <h4>🔵 Homozygous-alt site</h4>
+          <p>Both copies carry the alt allele. We substitute directly: the personalized reference has the donor's actual base here. Both alleles are the same so there's no ambiguity.</p>
+        </div>
+        <div class="concept-card">
+          <h4>🟡 Heterozygous site (N-masked)</h4>
+          <p>The two copies carry different alleles. We write <code>N</code> — the aligner treats N as equally compatible with any base, so neither allele is preferred. WASP catches any residual bias.</p>
+        </div>
+      </div>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">HPSI0114i-bezi_1.Nmasked.fa</span>
+          <span class="badge badge-fa">FASTA</span>
+        </div>
+        <div class="file-content">
+<span class="hl-yellow">&gt;1</span>   <span class="comment">← standard chromosome names — no duplication, GTF annotations apply directly</span>
+NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+TAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT
+<span class="comment">... [reference sequence at most positions]</span>
+<span class="comment">... [at pos 752566: G (hom-alt substituted)]</span>
+<span class="comment">... [at pos 754192: N (het site masked)]</span>
+<span class="comment">... ~1.5–2.5M N positions per donor genome</span>
+
+<span class="hl-yellow">&gt;2</span>   <span class="comment">← chromosome 2</span>
+<span class="comment">...</span>
+        </div>
+      </div>
+
+      <p>We also prepare a <strong>SNPsplit input file</strong> listing all het SNP positions with their phasing. This is used in Step 5c to assign reads to haplotype 1 or haplotype 2 after alignment.</p>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">HPSI0114i-bezi_1.snpsplit_input.txt</span>
+          <span class="badge badge-tsv">TSV</span>
+        </div>
+        <div class="file-content">
+<span class="hl-blue">CHROM  POS     REF  ALT  GT</span>
+<span class="hl-muted">──────────────────────────────────────</span>
+1      754192  C    T    <span class="hl-yellow">0|1</span>   <span class="comment">← hap1=C(REF), hap2=T(ALT)</span>
+1      768116  T    G    <span class="hl-yellow">1|0</span>   <span class="comment">← hap1=G(ALT), hap2=T(REF)</span>
+<span class="comment">... ~1.5–2.5M het SNPs per donor</span>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong>Why not build two full haplotype FASTAs?</strong> Short reads (~150 bp) that don't overlap any variant site would map equally well to both haplotypes, producing duplicate alignments throughout the genome (multi-mapping explosion). The N-masked single-reference approach avoids this — all reads align to one genome, and SNPsplit assigns them to a haplotype only when they actually overlap a het SNP (Step 5c).
+      </div>
+    </div>
+
+    <div class="substep">
+      <h3>Build the STAR index for this donor</h3>
+
+      <p>STAR pre-processes the N-masked FASTA into a searchable index. Because the sequence differs per donor, each donor needs their own STAR index. At ~30 GB (same as a standard haploid index), we build it, align all cells for that donor, then delete it before moving to the next donor.</p>
+
+      <div class="why-box">
+        <strong>One standard GTF — no duplication needed.</strong> The N-masked FASTA uses the same chromosome names as GRCh37 (<code>1, 2, ..., X</code>), so the GENCODE v19 GTF applies directly without any modification. This is one of the key advantages of the N-masked approach over a diploid-chromosome reference.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     STEP 4: CRAMs
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num orange">4</div>
+      <div class="step-title">Download the scRNA-seq CRAMs</div>
+    </div>
+
+    <p>ENA hosts 46,468 CRAM files for this dataset — one file per cell. We only download cells from the 104 open-access donors (~31 GB of the total ~38 GB).</p>
+
+    <p>A <strong>CRAM</strong> is a compressed alignment format. It stores reads as differences from a reference genome rather than storing the full sequence of each read. This makes files ~3× smaller than the equivalent FASTQ, but requires the reference genome to decode them.</p>
+
+    <div class="note-box">
+      <strong>Important:</strong> The CRAMs were aligned with BWA-MEM, a DNA aligner that doesn't understand RNA splicing. We can't use these alignments directly — we'll discard the alignment information and re-align with STAR. The CRAMs are essentially just a very compressed way to store the raw reads.
+    </div>
+
+    <div class="file-card">
+      <div class="file-card-header">
+        <span class="filename">19776_1#1.cram (decoded to SAM view)</span>
+        <span class="badge badge-bin">BINARY</span>
+      </div>
+      <div class="file-content">
+<span class="comment">CRAM is binary — this is what it looks like when decoded with samtools view:</span>
+<span class="hl-muted">──────────────────────────────────────────────────────────────────────────────────</span>
+<span class="hl-green">ERR1209149.1</span>  0  1  752560  60  <span class="hl-orange">75M</span>  *  0  0  ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT  IIIII...
+<span class="comment">                                       ↑↑↑</span>
+<span class="comment">                     CIGAR: 75M = 75 bp match (no splicing detected — BWA-MEM missed the exon junction)</span>
+
+<span class="hl-green">ERR1209149.2</span>  0  1  802340  60  <span class="hl-orange">75M</span>  *  0  0  GCTAAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCT  IIIII...
+<span class="comment">                     This read spans an exon junction but BWA-MEM just soft-clips it.</span>
+<span class="comment">                     STAR will correctly map it as e.g. 35M1765N40M (35bp exon1 + 1765bp intron + 40bp exon2)</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     STEP 5: PIPELINE
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num green">5</div>
+      <div class="step-title">Align each cell and produce BigWigs</div>
+    </div>
+
+    <div class="substep">
+      <h3>5a. CRAM → FASTQ <span class="substep-tag">samtools collate + samtools fastq</span></h3>
+
+      <p>We strip the (incorrect BWA-MEM) alignment and recover just the raw read sequences. A FASTQ file has four lines per read: a name, the DNA sequence, a separator, and per-base quality scores.</p>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">19776_1#1_R1.fq.gz</span>
+          <span class="badge badge-fq">FASTQ</span>
+        </div>
+        <div class="file-content">
+<span class="hl-yellow">@ERR1209149.1</span>   <span class="comment">← read name</span>
+<span class="hl-green">ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGT</span>  <span class="comment">← 75 bp read sequence</span>
+<span class="hl-muted">+</span>
+<span class="hl-purple">IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII</span>  <span class="comment">← Phred quality (I = Q40, very high confidence)</span>
+
+<span class="hl-yellow">@ERR1209149.2</span>
+<span class="hl-green">GCTAAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCTAGCT</span>
+<span class="hl-muted">+</span>
+<span class="hl-purple">HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH</span>  <span class="comment">← H = Q39</span>
+
+<span class="comment">... thousands of reads per cell</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="substep">
+      <h3>5b. STAR alignment to N-masked reference + WASP bias correction</h3>
+
+      <p>STAR aligns each read against the N-masked single reference. At het sites (N positions), any base is accepted equally. We run STAR with <strong>WASP mode</strong> enabled: for every read overlapping a het SNP, STAR internally flips the allele and re-aligns — if the read maps differently with the flipped allele, it was reference-biased and gets flagged for removal. This is the key step that removes alignment bias at het sites.</p>
+
+      <div class="diagram">
+        <pre>
+Read sequence:   ACGTACGT<span style="color:#2563eb;font-weight:700">G</span>TACGTACG CTACGTACGT...
+                          ↑ het SNP at pos 754192 (REF=C, ALT=T → masked to N)
+
+N-masked ref:    ACGTACGT<span style="color:#fde047;font-weight:700">N</span>TACGTACG CTACGT...   ← accepts G equally
+→ Read maps here; WASP flips allele to C, tries to re-align
+→ Re-alignment lands at same position → read is unbiased → PASS (vW:i:1)
+
+A biased read carrying REF allele C at a het site:
+First alignment:   ACGTACGT<span style="color:#dc2626;font-weight:700">C</span>TACGT...  maps fine (N accepts C)
+WASP flips to T:   ACGTACGT<span style="color:#fde047;font-weight:700">T</span>TACGT...  maps to a different location
+→ Result differs → read was reference-biased → FAIL (vW:i:2 or higher) → discarded
+
+A junction-spanning read:  EXON1_SEQ ─── EXON2_SEQ
+N-masked ref:              EXON1     intron     EXON2   ← STAR finds "35M1765N40M"
+        </pre>
+      </div>
+
+      <p>The result is a BAM file. Every read carries a <code>vW</code> tag indicating its WASP status. Only reads tagged <code>vW:i:1</code> (unbiased) proceed to the next step.</p>
+
+      <div class="file-card">
+        <div class="file-card-header">
+          <span class="filename">Aligned.sortedByCoord.out.bam (decoded to SAM, selected reads)</span>
+          <span class="badge badge-sam">SAM</span>
+        </div>
+        <div class="file-content">
+<span class="comment"># All reads map to standard chromosome names (no _h2)</span>
+<span class="hl-green">ERR1209149.1</span>  0  <span class="hl-blue">1</span>  752560  255  <span class="hl-orange">75M</span>          *  0  0  ACGTACGT<span class="hl-green">G</span>TACGT...  NH:i:1  <span class="hl-yellow">vW:i:1</span>
+<span class="comment">                                                                                       ↑↑↑↑↑</span>
+<span class="comment">                                                                 WASP: unbiased → keep</span>
+<span class="hl-green">ERR1209149.2</span>  0  <span class="hl-blue">1</span>  802340  255  <span class="hl-orange">35M1765N40M</span>  *  0  0  GCTAAGCT...          NH:i:1  <span class="hl-yellow">vW:i:1</span>
+<span class="comment">              CIGAR: 35M = 35bp exon1, 1765N = intron skipped, 40M = exon2</span>
+
+<span class="hl-red">ERR1209149.3</span>  0  <span class="hl-blue">1</span>  752560  255  <span class="hl-orange">75M</span>          *  0  0  ACGTACGT<span class="hl-red">C</span>TACGT...  NH:i:1  <span class="hl-red">vW:i:2</span>
+<span class="comment">                                                                                       ↑↑↑↑↑</span>
+<span class="comment">                                                    WASP: allele flip changed mapping → discard</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="substep">
+      <h3>5c. WASP filter + SNPsplit haplotype assignment</h3>
+
+      <p>Two sequential steps: first discard biased reads using the WASP tag, then assign the remaining reads to haplotype 1 or haplotype 2 using the phasing information from the VCF.</p>
+
+      <p><strong>WASP filter:</strong> Keep only reads tagged <code>vW:i:1</code> (WASP pass) — these are reads where flipping the allele did not change the mapping, i.e., reads that would have been found regardless of which allele is in the reference.</p>
+
+      <p><strong>SNPsplit:</strong> For each WASP-passing read that overlaps a het SNP, look up which allele the read carries and compare it to the phased VCF. If the read carries the <code>0|1</code> left allele → haplotype 1 BAM. If it carries the right allele → haplotype 2 BAM. Reads that don't overlap any het SNP (~60–80% of reads) go to an unassigned BAM.</p>
+
+      <div class="concept-grid">
+        <div class="concept-card">
+          <h4>wasp_filtered.genome1.bam (hap1)</h4>
+          <p>Reads carrying the phased hap1 allele at a het site. These represent RNA transcribed from chromosome copy 1. Standard chromosome names (<code>1, 2, ..., X</code>) — no renaming needed.</p>
+        </div>
+        <div class="concept-card">
+          <h4>wasp_filtered.genome2.bam (hap2)</h4>
+          <p>Reads carrying the phased hap2 allele at a het site. RNA from chromosome copy 2. Same coordinate space as hap1 — both map to the N-masked hs37d5 reference.</p>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong>60–80% unassigned reads are expected.</strong> Most Smart-seq2 reads (~75 bp) don't overlap any het SNP. These reads provide diploid-summed coverage but cannot be haplotype-assigned. The h1 and h2 BigWigs will be sparser than the diploid-summed track; this is a known limitation of short-read haplotype phasing.
+      </div>
+    </div>
+
+    <div class="substep">
+      <h3>5d. BAM → BigWig <span class="substep-tag">deeptools bamCoverage</span></h3>
+
+      <p>The final step converts each BAM to a BigWig — a compact binary format that stores a single number (RNA coverage) for every base position in the genome.</p>
+
+      <div class="coverage-viz">
+<span style="color:#94a3b8">chr1:   752,540                                 752,620</span>
+<span style="color:#94a3b8">        |                                              |</span>
+
+<span style="color:#64748b">Read 1: </span><span style="color:#86efac">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span>
+<span style="color:#64748b">Read 2:          </span><span style="color:#86efac">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span>
+<span style="color:#64748b">Read 3:    </span><span style="color:#86efac">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span>
+<span style="color:#64748b">Read 4:             </span><span style="color:#86efac">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</span>
+
+<span style="color:#94a3b8">Coverage:</span> <span style="color:#fde047">1 1 1 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 3 3 3 2 2 2 2 1 1 1</span>
+
+<span style="color:#94a3b8">BigWig stores this as: pos → coverage value, one entry per base (--binSize 1)</span>
+<span style="color:#94a3b8">Outputs per cell:  19776_1#1.h1.bw      (hap1-assigned reads only)</span>
+<span style="color:#94a3b8">                   19776_1#1.h2.bw      (hap2-assigned reads only)</span>
+<span style="color:#94a3b8">                   19776_1#1.diploid.bw (all WASP-passing reads — includes unassigned)</span>
+      </div>
+
+      <p>We produce three BigWig files per cell: <code>.h1.bw</code> and <code>.h2.bw</code> from the SNPsplit haplotype BAMs, and <code>.diploid.bw</code> from all WASP-passing reads (including unassigned). Coverage is normalized to CPM (counts per million mapped reads) so cells sequenced to different depths are comparable. For most DNA LM training, the diploid BigWig is the primary signal; the haplotype BigWigs enable allele-specific analysis.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     TRAINING DATA
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num" style="background:#854d0e">🎯</div>
+      <div class="step-title">What training data looks like</div>
+    </div>
+
+    <p>Each training example pairs a window of DNA sequence with the RNA coverage that sequence produced. The diploid BigWig is the primary training signal; the haplotype BigWigs (h1, h2) give additional signal for allele-specific effects when reads can be phase-assigned. The DNA sequence and the coverage track use the same personalized hs37d5-based coordinates throughout.</p>
+
+    <div class="training-pair">
+      <div class="training-seq">
+        <h4>INPUT — haplotype 1 sequence (chr1, 752,500–752,700)</h4>
+        <pre>...TAACCCTAACCCTAACCCTAACCC
+GCGCGAAAGCGCTCAGGCGCGAAA
+ACGCCTAACCCAAACCCAAACCCAA
+GCTAGCTAGCTA<span style="color:#1d4ed8;font-weight:700">A</span>GCTAGCTAGCTA
+...</pre>
+        <div style="margin-top:10px;font-size:12px;color:var(--blue)">donor <em>bezi</em>, haplotype 1 — has REF allele (A) at position 752566</div>
+      </div>
+      <div class="training-arrow">→</div>
+      <div class="training-cov">
+        <h4>TARGET — h1 RNA coverage over same window</h4>
+        <pre>pos: 752500 ... 752566 ... 752700
+cov: 0 0 0 0 ... 3 3 3 3 3 3 3 3
+     ____                ████████
+                 ↑ gene starts here</pre>
+        <div style="margin-top:10px;font-size:12px;color:var(--green)">reads from haplotype 1 only — carrying the A allele</div>
+      </div>
+    </div>
+
+    <div class="training-pair">
+      <div class="training-seq">
+        <h4>INPUT — haplotype 2 sequence (chr1, 752,500–752,700)</h4>
+        <pre>...TAACCCTAACCCTAACCCTAACCC
+GCGCGAAAGCGCTCAGGCGCGAAA
+ACGCCTAACCCAAACCCAAACCCAA
+GCTAGCTAGCTA<span style="color:#7c3aed;font-weight:700">G</span>GCTAGCTAGCTA
+...</pre>
+        <div style="margin-top:10px;font-size:12px;color:var(--purple)">donor <em>bezi</em>, haplotype 2 — has ALT allele (G) at position 752566</div>
+      </div>
+      <div class="training-arrow">→</div>
+      <div class="training-cov">
+        <h4>TARGET — h2 RNA coverage over same window</h4>
+        <pre>pos: 752500 ... 752566 ... 752700
+cov: 0 0 0 0 ... 2 2 2 2 2 2 2 2
+     ____                ███████
+                 ↑ slightly different expression</pre>
+        <div style="margin-top:10px;font-size:12px;color:var(--green)">reads from haplotype 2 only — carrying the G allele</div>
+      </div>
+    </div>
+
+    <div class="key-box">
+      <strong>What this teaches the model:</strong> Across 104 donors × ~36K cells, the model sees the same genomic region with slightly different sequences (each donor's N-masked personalized genome) and slightly different RNA output. It can learn that a particular variant (e.g., a SNP in a promoter) is associated with higher or lower expression — the signal that comes from genetic variation across individuals. When haplotype-resolved h1/h2 BigWigs are available, the model can additionally learn allele-specific effects within a single donor.
+    </div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     STEP 6: PROCESSING ORDER
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num">6</div>
+      <div class="step-title">Processing order and disk management</div>
+    </div>
+
+    <p>Each donor's STAR index is ~30 GB. Building all 104 at once would require 3+ TB. Instead, process one donor at a time and delete the index when done.</p>
+
+    <table>
+      <tr>
+        <th>Step</th>
+        <th>Time</th>
+        <th>Disk needed</th>
+        <th>Delete after?</th>
+      </tr>
+      <tr>
+        <td>Extract per-donor VCF (Step 3b)</td>
+        <td>~5 min</td>
+        <td>~500 MB</td>
+        <td>Yes (keep final .vcf.gz)</td>
+      </tr>
+      <tr>
+        <td>Build N-masked FASTA + SNPsplit input (Step 3c)</td>
+        <td>~10 min</td>
+        <td>~3.5 GB</td>
+        <td>Optional (keep for re-runs)</td>
+      </tr>
+      <tr>
+        <td>Build STAR index (Step 3d)</td>
+        <td>~30 min</td>
+        <td>~30 GB</td>
+        <td><strong>Yes — delete after all cells aligned</strong></td>
+      </tr>
+      <tr>
+        <td>Download CRAMs for donor (Step 4b)</td>
+        <td>varies</td>
+        <td>~300 MB (avg ~350 cells)</td>
+        <td>Yes (after FASTQ produced)</td>
+      </tr>
+      <tr>
+        <td>Align all cells for donor (Step 5)</td>
+        <td>~20 hrs on 4 cores</td>
+        <td>~100 MB/cell transient</td>
+        <td>Keep BigWigs only</td>
+      </tr>
+    </table>
+
+    <div class="note-box">
+      <strong>Final output per cell:</strong> three BigWig files — <code>CELL_ID.h1.bw</code>, <code>CELL_ID.h2.bw</code>, and <code>CELL_ID.diploid.bw</code> — each ~1–5 MB. Total for 104 donors × ~350 cells × 3 tracks ≈ ~109,000 BigWig files, ~200–600 GB total.
+    </div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────
+     SUMMARY TABLE
+─────────────────────────────────────────────── -->
+<div class="step-section">
+  <div class="container">
+    <div class="step-label">
+      <div class="step-num" style="background:var(--gray)">∑</div>
+      <div class="step-title">All accessions and download URLs</div>
+    </div>
+
+    <table>
+      <tr>
+        <th>Data</th>
+        <th>Accession</th>
+        <th>URL</th>
+      </tr>
+      <tr>
+        <td>scRNA-seq CRAMs</td>
+        <td><code>ENA PRJEB14362</code></td>
+        <td>ebi.ac.uk/ena/browser/view/PRJEB14362</td>
+      </tr>
+      <tr>
+        <td>Cell metadata</td>
+        <td><code>Zenodo 3625024</code></td>
+        <td>zenodo.org/record/3625024</td>
+      </tr>
+      <tr>
+        <td>hs37d5 reference</td>
+        <td>HipSci FTP</td>
+        <td>ftp.hipsci.ebi.ac.uk/hipsci/ftp/reference/hs37d5.fa.gz</td>
+      </tr>
+      <tr>
+        <td>GENCODE v19 GTF</td>
+        <td>GENCODE release 19</td>
+        <td>ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz</td>
+      </tr>
+      <tr>
+        <td>Imputed genotype BCFs</td>
+        <td>HipSci FTP</td>
+        <td>ftp.hipsci.ebi.ac.uk/hipsci/ftp/data/vep_openaccess_bcf/</td>
+      </tr>
+      <tr>
+        <td>HipSci WGS gVCF manifest</td>
+        <td>HipSci FTP</td>
+        <td>ftp.hipsci.ebi.ac.uk/hipsci/ftp/archive_datasets/ENA.ERP017015.wgs.normals.analysis_files.tsv</td>
+      </tr>
+      <tr>
+        <td>GitHub pipeline reference</td>
+        <td>singlecell_endodiff_paper</td>
+        <td>github.com/single-cell-genetics/singlecell_endodiff_paper</td>
+      </tr>
+    </table>
+
+    <p style="margin-top:12px">Full step-by-step commands: <code>doing_mds/3_data_download.md</code></p>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    Cuomo et al. 2020 · Smart-seq2 iPSC endoderm differentiation · HipSci consortium genotypes
+  </div>
+</footer>
+
+</body>
+</html>

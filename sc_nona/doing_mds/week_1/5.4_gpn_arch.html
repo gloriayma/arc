@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GPN-MSA vs GPN-Star Architecture Explorer</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --panel-2: #1d222c;
+    --line: #2a3140;
+    --text: #e6e8ee;
+    --muted: #8a93a6;
+    --dna: #5b8def;
+    --aux: #8a7bf5;
+    --xfmr: #f5a45b;
+    --cross: #ef6b8a;
+    --head: #5be0a3;
+    --clade: #f5d35b;
+    --target: #5bd0ef;
+    --shape: #aeb6c8;
+    --warn: #ffb454;
+    --good: #5be0a3;
+    --bad: #ef6b8a;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); margin: 0; padding: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Inter", Helvetica, Arial, sans-serif;
+    font-size: 14px; line-height: 1.45; }
+  a { color: #87b3ff; }
+  code, .mono { font-family: ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  header {
+    padding: 18px 24px 8px 24px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  header .sub { color: var(--muted); font-size: 12px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px 1fr 380px;
+    gap: 16px;
+    padding: 16px 24px 24px 24px;
+    align-items: start;
+  }
+  @media (max-width: 1200px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .panel h2 {
+    font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 10px 0; font-weight: 600;
+  }
+  .panel h3 {
+    font-size: 13px; margin: 14px 0 6px 0; font-weight: 600; color: var(--text);
+  }
+
+  .controls .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .controls label { font-size: 12px; color: var(--muted); }
+  .controls .seg {
+    display: flex; gap: 4px; flex-wrap: wrap;
+  }
+  .controls .seg button {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+    font-family: inherit;
+  }
+  .controls .seg button.active {
+    background: #2a3a5e; border-color: #3d5286; color: #cfe0ff;
+  }
+  .controls input[type=range] { width: 100%; }
+  .controls .rangeVal { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: var(--text); }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; font-size: 12px; }
+  .stats .k { color: var(--muted); }
+  .stats .v { color: var(--text); }
+  .stats .v.mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+  .diagram { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 12px;
+    align-items: center;
+  }
+  .stage .box {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .stage .box:hover { background: #20263236; }
+  .stage .box .title { font-weight: 600; }
+  .stage .box .desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .stage .box.dna   { border-left-color: var(--dna); }
+  .stage .box.aux   { border-left-color: var(--aux); }
+  .stage .box.xfmr  { border-left-color: var(--xfmr); }
+  .stage .box.cross { border-left-color: var(--cross); }
+  .stage .box.head  { border-left-color: var(--head); }
+  .stage .box.clade { border-left-color: var(--clade); }
+  .stage .box.target { border-left-color: var(--target); }
+
+  .stage .shape {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px; color: var(--shape);
+    background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 10px; text-align: center;
+    white-space: nowrap;
+  }
+
+  .arrow {
+    height: 18px;
+    display: grid; grid-template-columns: 1fr 260px; gap: 12px;
+  }
+  .arrow .line {
+    width: 2px; background: var(--line); margin-left: 22px; height: 100%;
+  }
+  .arrow .label {
+    color: var(--muted); font-size: 11px; align-self: center; padding-left: 2px;
+  }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted); }
+  .legend .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+  .notes { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .notes p { margin: 6px 0; }
+
+  .tag {
+    display: inline-block; padding: 1px 6px; border-radius: 999px;
+    font-size: 10px; font-family: ui-monospace, Menlo, Consolas, monospace;
+    background: #232a38; color: #cfd6e6; border: 1px solid var(--line);
+    margin-left: 6px;
+  }
+  .tag.good { background: #1a3328; color: #b3f5cf; border-color: #265a3d; }
+  .tag.bad  { background: #3a1a25; color: #ffb3c5; border-color: #5f2233; }
+  .tag.warn { background: #3a3210; color: #ffe48a; border-color: #5f5119; }
+  .tag.info { background: #1a2a36; color: #aad4ff; border-color: #284158; }
+
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px;
+          background: #1f2632; border: 1px solid var(--line); color: var(--muted);
+          margin-left: 6px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+  .footnote { color: var(--muted); font-size: 11px; line-height: 1.5; }
+
+  /* MSA visualization */
+  .msa-wrap { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; }
+  .msa-wrap .caption { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  svg.msa { display: block; width: 100%; height: auto; }
+
+  /* Question box */
+  .qabox {
+    background: #1a2236;
+    border: 1px solid #2c3a55;
+    border-left: 3px solid #5b8def;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 8px 0;
+    font-size: 12px;
+  }
+  .qabox .q { color: #cfe0ff; font-weight: 600; margin-bottom: 4px; }
+  .qabox .a { color: var(--text); }
+  .qabox .a code { background: #0f1115; padding: 1px 4px; border-radius: 3px; }
+
+  /* Big toggle */
+  .modeToggle {
+    display: flex; gap: 0; border: 1px solid var(--line); border-radius: 8px;
+    overflow: hidden; margin-bottom: 14px;
+  }
+  .modeToggle button {
+    flex: 1; background: var(--panel-2); color: var(--text); border: none;
+    padding: 10px 12px; font-family: inherit; font-size: 13px; cursor: pointer;
+    border-right: 1px solid var(--line);
+  }
+  .modeToggle button:last-child { border-right: none; }
+  .modeToggle button.active { background: #2a3a5e; color: #cfe0ff; }
+  .modeToggle button.compare.active { background: #3a2a5e; color: #ddcfff; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>GPN-MSA &amp; GPN-Star Architecture Explorer</h1>
+    <div class="sub">How each model consumes a multi-species alignment. Two key questions: (1) axial attention? (2) variable MSA rows?</div>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--dna)"></span>Focal / target</span>
+    <span><span class="swatch" style="background:var(--aux)"></span>Aux features</span>
+    <span><span class="swatch" style="background:var(--clade)"></span>Clade-pooled source</span>
+    <span><span class="swatch" style="background:var(--xfmr)"></span>Seq self-attn</span>
+    <span><span class="swatch" style="background:var(--cross)"></span>Cross-attn (phylo)</span>
+    <span><span class="swatch" style="background:var(--head)"></span>MLM head</span>
+  </div>
+</header>
+
+<div style="padding: 0 24px;">
+  <div class="modeToggle" id="modeToggle">
+    <button data-mode="msa" class="active">GPN-MSA (2023, Nature Biotech 2024)</button>
+    <button data-mode="star">GPN-Star (2025, bioRxiv)</button>
+    <button data-mode="compare" class="compare">Side-by-side</button>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- Left: controls + key Q&A + stats -->
+  <div class="panel controls">
+    <h2>Quick answers</h2>
+    <div class="qabox">
+      <div class="q">Q1. Is there axial attention?</div>
+      <div class="a" id="qa-axial"></div>
+    </div>
+    <div class="qabox">
+      <div class="q">Q2. Variable number of MSA rows?</div>
+      <div class="a" id="qa-rows"></div>
+    </div>
+
+    <h2 style="margin-top:14px">Configuration</h2>
+    <div id="msa-controls">
+      <div class="row">
+        <label>Alignment</label>
+        <div class="seg" id="seg-msa-aln">
+          <button data-val="vertebrate" class="active">vertebrate (multiz100way, 89 aux)</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Context window</label>
+        <div class="seg" id="seg-msa-ctx">
+          <button data-val="128" class="active">128 bp</button>
+        </div>
+        <div class="footnote">GPN-MSA is trained at exactly L=128.</div>
+      </div>
+    </div>
+
+    <div id="star-controls" style="display:none">
+      <div class="row">
+        <label>Variant</label>
+        <div class="seg" id="seg-star-aln">
+          <button data-val="V" class="active">V · vertebrates (100 sp)</button>
+          <button data-val="M">M · mammals (447 sp)</button>
+          <button data-val="P">P · primates (243 sp)</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>Model size</label>
+        <div class="seg" id="seg-star-size">
+          <button data-val="25M">25M</button>
+          <button data-val="85M" class="active">85M</button>
+          <button data-val="200M">200M</button>
+        </div>
+      </div>
+      <div class="row">
+        <label>N<sub>T</sub> · target sequences sampled per step  <span class="rangeVal" id="nt-val">20</span></label>
+        <input type="range" id="rng-nt" min="1" max="40" value="20">
+        <div class="footnote">Training: 20. Inference: 1 (primary target).</div>
+      </div>
+    </div>
+
+    <h2 style="margin-top:14px">Resolved spec</h2>
+    <div class="stats" id="stats"></div>
+
+    <p class="footnote" style="margin-top:10px" id="param-footnote"></p>
+  </div>
+
+  <!-- Middle: diagram -->
+  <div class="panel">
+    <h2 id="diagram-title">Forward pass</h2>
+
+    <div class="msa-wrap" id="msa-viz"></div>
+
+    <div class="diagram" id="diagram" style="margin-top:14px"></div>
+
+    <div class="notes" id="notes"></div>
+  </div>
+
+  <!-- Right: callouts -->
+  <div class="panel">
+    <h2 id="right-title">Architecture details</h2>
+    <div id="callouts"></div>
+
+    <h2 style="margin-top:16px">Sources</h2>
+    <ul class="footnote" style="padding-left:18px; margin:0;">
+      <li><a href="https://www.biorxiv.org/content/10.1101/2023.10.10.561776v1" target="_blank" rel="noopener">GPN-MSA preprint (Benegas et al. 2023)</a></li>
+      <li><a href="https://doi.org/10.1038/s41587-024-02511-w" target="_blank" rel="noopener">GPN-MSA · Nature Biotech 2024</a></li>
+      <li><a href="https://www.biorxiv.org/content/10.1101/2025.09.21.677619v1" target="_blank" rel="noopener">GPN-Star preprint (Ye et al. 2025)</a></li>
+      <li><a href="https://huggingface.co/songlab/gpn-msa-sapiens" target="_blank" rel="noopener">HF · songlab/gpn-msa-sapiens</a></li>
+      <li><a href="https://huggingface.co/collections/songlab/gpn-star-68c0c055acc2ee51d5c4f129" target="_blank" rel="noopener">HF · GPN-Star collection</a></li>
+      <li><a href="https://github.com/songlab-cal/gpn" target="_blank" rel="noopener">songlab-cal/gpn (repo)</a></li>
+      <li>Research notes: <code>doing_mds/gpn_arch_research.md</code></li>
+    </ul>
+  </div>
+</div>
+
+<!-- Compare-mode container, only shown in compare mode -->
+<div class="layout" id="compare-layout" style="display:none; grid-template-columns: 1fr 1fr;">
+  <div class="panel">
+    <h2 style="color:#5b8def">GPN-MSA</h2>
+    <div class="msa-wrap" id="msa-viz-cmp-left"></div>
+    <div class="diagram" id="diagram-cmp-left" style="margin-top:14px"></div>
+  </div>
+  <div class="panel">
+    <h2 style="color:#f5a45b">GPN-Star</h2>
+    <div class="msa-wrap" id="msa-viz-cmp-right"></div>
+    <div class="diagram" id="diagram-cmp-right" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<script>
+  // ─────────────────────────────────────────────────────────────
+  //  Model specs
+  // ─────────────────────────────────────────────────────────────
+  const MSA_SPEC = {
+    params: "~86M",
+    layers: 12, hidden: 768, ffn: 3072, heads: 12,
+    vocab: 6, naux: 445, auxv: 5,
+    ctx: 128,
+    nspecies: 90,    // 1 focal + 89 aux
+  };
+
+  const STAR_SIZES = {
+    "25M":  { layers: 8,  hidden: 512,  ffn: 2048, heads: 4 },
+    "85M":  { layers: 12, hidden: 768,  ffn: 3072, heads: 6 },
+    "200M": { layers: 16, hidden: 1024, ffn: 4096, heads: 8 },
+  };
+  const STAR_VARIANTS = {
+    V: { name: "vertebrates", ns: 100, nc: 45,  phi: 0.20, ctx: 128 },
+    M: { name: "mammals",     ns: 447, nc: 145, phi: 0.05, ctx: 256 },
+    P: { name: "primates",    ns: 243, nc: 21,  phi: 0.05, ctx: 256 },
+  };
+
+  const state = {
+    mode: "msa",         // "msa" | "star" | "compare"
+    starAln: "V",
+    starSize: "85M",
+    starNT: 20,
+  };
+
+  function fmt(n) { return n.toLocaleString("en-US"); }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Q&A box content
+  // ─────────────────────────────────────────────────────────────
+  function renderQA() {
+    const axial = document.getElementById("qa-axial");
+    const rows = document.getElementById("qa-rows");
+    if (state.mode === "msa") {
+      axial.innerHTML = `<span class="tag bad">No</span> The 89 non-focal species are flattened into a per-position <code>(89×5)=445</code> one-hot vector and concatenated with the focal embedding. The transformer attends only along <code>L=128</code>. The MSA is never a 2D thing attended to.`;
+      rows.innerHTML = `<span class="tag bad">No</span> Fixed at 89 aux species. Missing species at a column → "gap" state of the 5-way one-hot. Architecture has hard-coded <code>n_aux_features=445</code>.`;
+    } else if (state.mode === "star") {
+      axial.innerHTML = `<span class="tag warn">Partial / not standard</span> Each block has two attention modules: <b>(a)</b> sequence-wise self-attn along <code>L</code> (per target, with Q/K tied to the primary target — MSA-Transformer trick), and <b>(b)</b> phylogeny-informed cross-attn at each column where target rows attend to clade-pooled source rows with a phylogenetic-distance bias. There is <i>no</i> standard column-wise attention across species.`;
+      rows.innerHTML = `<span class="tag good">Yes</span> <code>N_S</code> (source species), <code>N_T</code> (sampled targets), and <code>N_C</code> (clades) are all data hyperparameters, not architectural constants. Species are clustered into clades by phylogenetic distance and attention-pooled into one embedding per clade.`;
+    } else {
+      // compare mode: terse summary in each
+      axial.innerHTML = `<b>MSA:</b> No.<br><b>Star:</b> Partial — sequence self-attn + phylogeny-biased cross-attn.`;
+      rows.innerHTML = `<b>MSA:</b> Fixed (89 aux).<br><b>Star:</b> Variable (<code>N_S</code>, <code>N_T</code>, <code>N_C</code> are data hyperparameters).`;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Stats panel
+  // ─────────────────────────────────────────────────────────────
+  function renderStats() {
+    const el = document.getElementById("stats");
+    if (state.mode === "msa") {
+      el.innerHTML = `
+        <div class="k">Params</div><div class="v mono">${MSA_SPEC.params}</div>
+        <div class="k">Layers</div><div class="v mono">${MSA_SPEC.layers}</div>
+        <div class="k">Hidden dim</div><div class="v mono">${MSA_SPEC.hidden}</div>
+        <div class="k">FFN dim</div><div class="v mono">${MSA_SPEC.ffn}</div>
+        <div class="k">Heads</div><div class="v mono">${MSA_SPEC.heads}</div>
+        <div class="k">L</div><div class="v mono">${MSA_SPEC.ctx} bp</div>
+        <div class="k">Focal vocab</div><div class="v mono">6 {A,C,G,T,gap,mask}</div>
+        <div class="k">Aux features</div><div class="v mono">445 = 89×5</div>
+        <div class="k">Pos encoding</div><div class="v mono">RoPE</div>
+        <div class="k">Attention</div><div class="v mono">full self-attn / L</div>
+      `;
+      document.getElementById("param-footnote").innerHTML = `
+        <code>vocab_size=6</code>, <code>n_aux_features=445</code>, <code>aux_features_vocab_size=5</code>. Source: <code>config.json</code> on HF <code>songlab/gpn-msa-sapiens</code>.`;
+    } else if (state.mode === "star") {
+      const s = STAR_SIZES[state.starSize];
+      const a = STAR_VARIANTS[state.starAln];
+      el.innerHTML = `
+        <div class="k">Size</div><div class="v mono">${state.starSize}</div>
+        <div class="k">Variant</div><div class="v mono">${state.starAln} · ${a.name}</div>
+        <div class="k">Layers (K)</div><div class="v mono">${s.layers}</div>
+        <div class="k">Hidden (H)</div><div class="v mono">${s.hidden}</div>
+        <div class="k">FFN</div><div class="v mono">${s.ffn}</div>
+        <div class="k">Heads (self/cross)</div><div class="v mono">${s.heads} / ${s.heads}</div>
+        <div class="k">L</div><div class="v mono">${a.ctx} bp</div>
+        <div class="k">N_S (source species)</div><div class="v mono">${a.ns}</div>
+        <div class="k">N_C (clades)</div><div class="v mono">${a.nc}</div>
+        <div class="k">φ_clade threshold</div><div class="v mono">${a.phi}</div>
+        <div class="k">N_T (training)</div><div class="v mono">${state.starNT}</div>
+        <div class="k">Pos enc</div><div class="v mono">RoPE + FIRE-bias</div>
+      `;
+      document.getElementById("param-footnote").innerHTML = `
+        Sizes from Supp. Table 9. The 200M model is the headline checkpoint; 85M is used in head-to-head with GPN-MSA. At inference <code>N_T = 1</code>.`;
+    } else {
+      el.innerHTML = `<div class="k" style="grid-column:1/-1;color:var(--muted)">Comparison mode — see diagrams.</div>`;
+      document.getElementById("param-footnote").innerHTML = "";
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  MSA matrix SVG visualization
+  // ─────────────────────────────────────────────────────────────
+  function svgMsaMatrix({rows, cols, mode, target}) {
+    // mode: "msa-input" | "msa-collapsed" | "star-input" | "star-branched"
+    const W = 520, H = 220;
+    const padL = 90, padR = 10, padT = 10, padB = 24;
+    const cellW = (W - padL - padR) / cols;
+    const cellH = (H - padT - padB) / Math.min(rows, 30);
+    const drawRows = Math.min(rows, 30);
+
+    // Random-ish nucleotide colors but stable
+    function color(i,j) {
+      const k = (i*7 + j*3) % 4;
+      return ["#3a5d8c","#3a8c5b","#8c7b3a","#8c3a5b"][k];
+    }
+
+    let cells = "";
+    for (let i = 0; i < drawRows; i++) {
+      for (let j = 0; j < cols; j++) {
+        const isTarget = target && target.includes(i);
+        const fill = isTarget ? "#5bd0ef" : color(i,j);
+        const stroke = isTarget ? "#9bf0ff" : "none";
+        cells += `<rect x="${padL + j*cellW}" y="${padT + i*cellH}" width="${cellW-0.3}" height="${cellH-0.3}" fill="${fill}" stroke="${stroke}" stroke-width="${isTarget?0.6:0}" />`;
+      }
+    }
+
+    // Y-axis labels
+    let labels = "";
+    if (mode === "msa-input") {
+      labels += `<text x="${padL-6}" y="${padT + cellH*0.7}" text-anchor="end" font-size="9" fill="#5bd0ef" font-weight="bold">human (focal)</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*4}" text-anchor="end" font-size="9" fill="#aeb6c8">chimp</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*7}" text-anchor="end" font-size="9" fill="#aeb6c8">mouse</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*12}" text-anchor="end" font-size="9" fill="#aeb6c8">chicken</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*20}" text-anchor="end" font-size="9" fill="#aeb6c8">zebrafish</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*27}" text-anchor="end" font-size="9" fill="#8a93a6">⋮ (89 aux)</text>`;
+    } else if (mode === "star-input") {
+      labels += `<text x="${padL-6}" y="${padT + cellH*0.7}" text-anchor="end" font-size="9" fill="#5bd0ef" font-weight="bold">primary tgt</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*3.5}" text-anchor="end" font-size="9" fill="#5bd0ef">sampled tgt</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*6}" text-anchor="end" font-size="9" fill="#aeb6c8">source sp.</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*13}" text-anchor="end" font-size="9" fill="#aeb6c8">⋮</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*20}" text-anchor="end" font-size="9" fill="#aeb6c8">⋮</text>`;
+      labels += `<text x="${padL-6}" y="${padT + cellH*27}" text-anchor="end" font-size="9" fill="#8a93a6">(N_S total)</text>`;
+    }
+
+    // X axis label
+    let xLabel = `<text x="${padL + (W-padL-padR)/2}" y="${H-4}" text-anchor="middle" font-size="10" fill="#8a93a6">L = ${cols} bp</text>`;
+
+    // Attention indicator arrow (horizontal)
+    let attnArrow = "";
+    if (mode === "msa-input") {
+      // arrow along the focal row
+      const y = padT + cellH*0.7 + 6;
+      attnArrow = `
+        <line x1="${padL+5}" y1="${y+cellH+4}" x2="${W-padR-5}" y2="${y+cellH+4}" stroke="#f5a45b" stroke-width="1.5" stroke-dasharray="3,2" />
+        <text x="${padL + (W-padL-padR)/2}" y="${y+cellH+16}" text-anchor="middle" font-size="9" fill="#f5a45b">↔ self-attention along L (focal embedding only)</text>
+      `;
+    } else if (mode === "star-input") {
+      const y = padT + cellH*0.7 + 6;
+      attnArrow = `
+        <line x1="${padL+5}" y1="${y+cellH+4}" x2="${W-padR-5}" y2="${y+cellH+4}" stroke="#f5a45b" stroke-width="1.5" stroke-dasharray="3,2" />
+        <text x="${padL + (W-padL-padR)/2}" y="${y+cellH+16}" text-anchor="middle" font-size="9" fill="#f5a45b">↔ tied-row self-attn along L (Q,K from primary tgt)</text>
+        <line x1="${padL + cellW*8}" y1="${padT + cellH*1.2}" x2="${padL + cellW*8}" y2="${padT + cellH*27}" stroke="#ef6b8a" stroke-width="1.5" stroke-dasharray="3,2" />
+        <text x="${padL + cellW*8 + 6}" y="${padT + cellH*14}" font-size="9" fill="#ef6b8a">↕ phylo cross-attn at column j</text>
+      `;
+    }
+
+    return `<svg class="msa" viewBox="0 0 ${W} ${H+30}">
+      ${cells}
+      ${labels}
+      ${xLabel}
+      ${attnArrow}
+    </svg>`;
+  }
+
+  function renderMsaViz(targetId) {
+    const target = targetId ? document.getElementById(targetId) : document.getElementById("msa-viz");
+    if (!target) return;
+    if (state.mode === "msa" || (state.mode === "compare" && targetId === "msa-viz-cmp-left")) {
+      target.innerHTML = `
+        <div class="caption">Multi-species alignment as the model sees it.
+          <span class="tag info">90 × 128</span>
+          The vertical axis is collapsed into a per-position aux vector before any transformer block.</div>
+        ${svgMsaMatrix({rows: 90, cols: 128, mode: "msa-input"})}
+      `;
+    } else if (state.mode === "star" || (state.mode === "compare" && targetId === "msa-viz-cmp-right")) {
+      const a = STAR_VARIANTS[state.starAln];
+      target.innerHTML = `
+        <div class="caption">Multi-species alignment, kept as 2D throughout the encoder.
+          <span class="tag info">${a.ns} × ${a.ctx}</span>
+          <span class="tag info">${a.nc} clades</span>
+          Sequence axis ↔ and species axis ↕ both have attention modules.</div>
+        ${svgMsaMatrix({rows: a.ns, cols: a.ctx, mode: "star-input", target: [0, 3, 4]})}
+      `;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Diagram blocks
+  // ─────────────────────────────────────────────────────────────
+  function box(cls, title, desc, tags = []) {
+    const tagHtml = tags.map(t => `<span class="tag ${t.cls||''}">${t.text}</span>`).join("");
+    return `
+      <div class="box ${cls}">
+        <div class="title">${title}${tagHtml}</div>
+        ${desc ? `<div class="desc">${desc}</div>` : ""}
+      </div>`;
+  }
+  function stage(boxHtml, shapeStr) {
+    return `<div class="stage">${boxHtml}<div class="shape">${shapeStr}</div></div>`;
+  }
+  function arrow(label = "") {
+    return `<div class="arrow"><div class="line"></div><div class="label">${label}</div></div>`;
+  }
+
+  function diagramMSA() {
+    const rows = [];
+    rows.push(stage(
+      box("dna", "Aligned MSA window", "90 species (1 focal + 89 aux) × 128 bp from multiz100way.", [{text:"input", cls:"info"}]),
+      `(90, 128)`
+    ));
+    rows.push(arrow("Split focal row from aux rows"));
+
+    rows.push(stage(
+      box("dna", "Focal tokens (human)", "Vocab = 6 (A, C, G, T, gap, [MASK]). 15% of positions masked."),
+      `(128,)`
+    ));
+    rows.push(stage(
+      box("aux", "Aux one-hot stack", "Each of 89 aux species one-hot in 5 (A/C/G/T/gap), then <i>concatenated</i> across species.", [{text:"flatten", cls:"warn"}]),
+      `(128, 445)`
+    ));
+
+    rows.push(arrow("Embed(focal) → 768-d; aux MLP projection into same per-position vector"));
+    rows.push(stage(
+      box("xfmr", "Per-position embedding", "Focal embed ⊕ aux features → single 768-d vector per position. <b>Vertical (species) axis is now gone.</b>", [{text:"merge", cls:"info"}]),
+      `(128, 768)`
+    ));
+
+    for (let i = 0; i < MSA_SPEC.layers; i++) {
+      rows.push(arrow(""));
+      rows.push(stage(
+        box("xfmr", `RoFormer block ${i+1}`,
+            `MHA (RoPE, ${MSA_SPEC.heads} heads) + FFN (${MSA_SPEC.ffn}). Full self-attn along L only.`),
+        `(128, 768)`
+      ));
+    }
+    rows.push(arrow("MLM head: Linear(768 → 4)"));
+    rows.push(stage(
+      box("head", "Logits over {A, C, G, T}",
+          "Per-masked-position softmax. Loss = weighted CE (phyloP × phastCons_M). Variant score = log P(ALT)/P(REF)."),
+      `(128, 4)`
+    ));
+    return rows.join("\n");
+  }
+
+  function diagramStar() {
+    const s = STAR_SIZES[state.starSize];
+    const a = STAR_VARIANTS[state.starAln];
+    const rows = [];
+
+    rows.push(stage(
+      box("dna", "Aligned MSA window", `${a.ns} species × ${a.ctx} bp WGA window. <b>2D structure is preserved through the encoder.</b>`, [{text:"input", cls:"info"}]),
+      `(${a.ns}, ${a.ctx})`
+    ));
+    rows.push(arrow("Split into target view + source view"));
+
+    rows.push(stage(
+      box("target", "Target sequences", `Sample N_T = ${state.starNT} target species (incl. primary). Mask 15% of non-gap positions per target.`, [{text:"target", cls:"info"}]),
+      `(${state.starNT}, ${a.ctx})`
+    ));
+    rows.push(stage(
+      box("clade", "Source sequences",
+          `All ${a.ns} source species. Clustered into N_C = ${a.nc} clades by phylogenetic distance (φ_clade = ${a.phi}).`,
+          [{text:"source", cls:"info"}]),
+      `(${a.ns}, ${a.ctx})`
+    ));
+
+    rows.push(arrow("Token embed → R^H, then attention-pool source species within each clade (distance-biased)"));
+    rows.push(stage(
+      box("target", "Target embeddings",
+          `Learned embedding per target token. <b>Vertical axis (N_T) persists.</b>`,
+          [{text:"keeps N_T", cls:"good"}]),
+      `(${state.starNT}, ${a.ctx}, ${s.hidden})`
+    ));
+    rows.push(stage(
+      box("clade", "Clade-pooled source embeddings",
+          `Each clade summarized at every column. <b>This is the species → clade compression — happens once.</b>`,
+          [{text:"variable N_S handled here", cls:"good"}]),
+      `(${a.nc}, ${a.ctx}, ${s.hidden})`
+    ));
+
+    for (let i = 0; i < s.layers; i++) {
+      rows.push(arrow(""));
+      rows.push(stage(
+        box("xfmr", `Block ${i+1} · (a) sequence-wise self-attn`,
+            `Self-attn along L per target. Q, K computed from primary target only; attention map shared across all N_T (MSA-Transformer tied row attn). RoPE on positions.`,
+            [{text:"↔ along L", cls:"info"}]),
+        `(${state.starNT}, ${a.ctx}, ${s.hidden})`
+      ));
+      rows.push(arrow(""));
+      rows.push(stage(
+        box("cross", `Block ${i+1} · (b) phylogeny-informed cross-attn`,
+            `Each target row at column j attends to clade-pooled source rows at column j, with FIRE-encoded evolutionary-distance bias. In-clade attention masked out.`,
+            [{text:"↕ target ← clade", cls:"info"}]),
+        `(${state.starNT}, ${a.ctx}, ${s.hidden})`
+      ));
+      rows.push(arrow(""));
+      rows.push(stage(
+        box("xfmr", `Block ${i+1} · (c) FFN`,
+            `2-layer MLP, intermediate ${s.ffn}, GELU. Pre-LN, dropout 0.1.`),
+        `(${state.starNT}, ${a.ctx}, ${s.hidden})`
+      ));
+    }
+
+    rows.push(arrow("MLM head: Linear(H → 4)"));
+    rows.push(stage(
+      box("head", "Logits over {A, C, G, T} per target",
+          `Per-masked-position softmax. Same weighted CE loss as GPN-MSA. At inference, N_T = 1.`),
+      `(${state.starNT}, ${a.ctx}, 4)`
+    ));
+    return rows.join("\n");
+  }
+
+  function renderDiagram() {
+    document.getElementById("diagram-title").textContent =
+      state.mode === "msa" ? "GPN-MSA · forward pass" :
+      state.mode === "star" ? "GPN-Star · forward pass" :
+      "Side-by-side";
+    if (state.mode === "msa") {
+      document.getElementById("diagram").innerHTML = diagramMSA();
+    } else if (state.mode === "star") {
+      document.getElementById("diagram").innerHTML = diagramStar();
+    } else {
+      document.getElementById("diagram").innerHTML = "";
+    }
+  }
+
+  function renderCompare() {
+    if (state.mode !== "compare") return;
+    renderMsaViz("msa-viz-cmp-left");
+    renderMsaViz("msa-viz-cmp-right");
+    document.getElementById("diagram-cmp-left").innerHTML = diagramMSA();
+    document.getElementById("diagram-cmp-right").innerHTML = diagramStar();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Right-panel callouts
+  // ─────────────────────────────────────────────────────────────
+  function renderCallouts() {
+    const el = document.getElementById("callouts");
+    const titleEl = document.getElementById("right-title");
+    if (state.mode === "msa") {
+      titleEl.textContent = "GPN-MSA · key design choices";
+      el.innerHTML = `
+        <p><span class="tag warn">Flatten</span> <b>MSA → per-position aux vector.</b><br>
+        At each of 128 positions, the model sees <code>focal_embed ⊕ concat(89 × 5 one-hot)</code>. There is no learned per-species embedding — species identity is the position inside the 445-dim vector.
+        <span class="pill">n_aux_features = 445</span></p>
+
+        <p><span class="tag bad">No phylogeny</span> <b>Tree is invisible to the model.</b><br>
+        The fixed ordering of the 89 species in the aux vector is the only structure. The paper notes the 10 closest primates were excluded by hand because they hurt performance — exactly the problem GPN-Star is built to fix.</p>
+
+        <p><span class="tag info">Mask only focal</span> <b>Only human positions are masked.</b><br>
+        Unlike MSA Transformer, which masks across the alignment, GPN-MSA masks only the human (focal) row. Aux rows are evidence; they are not predicted. Loss is 4-way (no [MASK] in output).</p>
+
+        <p><span class="tag info">Loss weighting</span> <b>Weighted MLM.</b><br>
+        <code>w ∝ (0.1·repeat + 1·non-repeat) · max(phyloP, 1) · (phastCons_M + 0.1)</code>. Plus random-nucleotide augmentation in neutral sites to push uniform predictions there.</p>
+
+        <p class="footnote">Backbone is HF's stock RoFormer (<code>GPNRoFormerForMaskedLM</code>). 86M params. Trained 4.75h on 4×A100. Variant scoring: ~5M variants/h.</p>
+      `;
+    } else if (state.mode === "star") {
+      const a = STAR_VARIANTS[state.starAln];
+      const s = STAR_SIZES[state.starSize];
+      el.innerHTML = "";
+      document.getElementById("right-title").textContent = "GPN-Star · key design choices";
+      el.innerHTML = `
+        <p><span class="tag good">Variable N_S</span> <b>Attention-pool by clade.</b><br>
+        Source species are clustered into N_C = ${a.nc} clades (single-linkage, φ_clade = ${a.phi}). Within each clade and column, an attention-pool with a phylogenetic-distance bias compresses species → 1 embedding. This is where variable alignment composition is handled.</p>
+
+        <p><span class="tag warn">Tied row attn</span> <b>Sequence-wise self-attn (per target).</b><br>
+        Borrowed from MSA Transformer: Q and K come from the <i>primary</i> target only, then the attention map is broadcast to all N_T target rows. Memory drops from O(N_T·L²) to O(L²). RoPE on positions.</p>
+
+        <p><span class="tag info">Phylo cross-attn</span> <b>Target ← clade-source at column j.</b><br>
+        Adds a bias <code>b(Φ)</code> using FIRE encoding of pairwise phylogenetic distances. In-clade attention is masked out (a target in clade c cannot attend to clade c's pooled source, to prevent trivial copying).</p>
+
+        <p><span class="tag good">Mask all targets</span> <b>Every target species is masked &amp; predicted.</b><br>
+        Same 15% positions masked across same-clade species (to prevent leakage). 90% [MASK] / 10% leave-as-is. Cross-clade gives much more training signal than just-focal masking.</p>
+
+        <p><span class="tag info">Mutation-rate calibration</span> <b>Post-hoc score correction.</b><br>
+        LLR scores are calibrated against pentanucleotide-context neutral background to disentangle selection from mutation rate.</p>
+
+        <p class="footnote">${state.starSize} = K=${s.layers}, H=${s.hidden}, FFN=${s.ffn}, ${s.heads} heads (self) + ${s.heads} (cross). Trained on ${a.ns}-species ${a.name} alignment (φ_clade = ${a.phi}), context ${a.ctx} bp. 200M model: ~6.6 days on 8×A100 for vertebrates.</p>
+      `;
+    } else {
+      document.getElementById("right-title").textContent = "Why GPN-Star vs GPN-MSA";
+      el.innerHTML = `
+        <p>The GPN-Star paper diagnoses three issues with GPN-MSA that motivated the redesign:</p>
+        <ol style="padding-left:18px; font-size:12px; color:var(--muted)">
+          <li>Generic 1D transformer "suitable for unaligned sequences" — fails to exploit alignment structure.</li>
+          <li>Cannot natively handle evolutionary relationships (no phylogeny).</li>
+          <li>Closely related species degrade performance, so the 10 closest primates had to be hand-excluded. Model is over-tuned to one alignment.</li>
+        </ol>
+        <p>GPN-Star's three architectural answers:</p>
+        <ul style="padding-left:18px; font-size:12px;">
+          <li><b>Keep 2D structure</b> — target tensor stays <code>(N_T, L, H)</code> through the encoder.</li>
+          <li><b>Encode the tree</b> — phylogenetic-distance bias in attention; clade-attention-pool reduces dimensionality variably.</li>
+          <li><b>Mask all targets</b> — many-times more training signal than masking only human.</li>
+        </ul>
+        <p class="footnote">In head-to-head benchmarks (Supp Fig 1), an 85M GPN-Star outperforms 86M GPN-MSA at ClinVar, COSMIC, OMIM, and gnomAD variant scoring tasks.</p>
+      `;
+    }
+  }
+
+  function renderNotes() {
+    const el = document.getElementById("notes");
+    if (state.mode === "msa") {
+      el.innerHTML = `
+        <p>⚠ <b>Your hypothesis about axial attention does not apply to GPN-MSA.</b> The 89-species axis is flattened into the aux vector before any attention block — the transformer is purely 1D over L=128.</p>
+        <p>⚠ <b>Your hypothesis about variable rows does not apply to GPN-MSA either.</b> <code>n_aux_features=445</code> is hardcoded. "Variable" only in the sense that any species can be marked "gap" — but the slot is always there.</p>
+      `;
+    } else if (state.mode === "star") {
+      const a = STAR_VARIANTS[state.starAln];
+      el.innerHTML = `
+        <p>✓ <b>Variable MSA rows: yes</b> — but not in the way one might first imagine. Variable <code>N_S</code> is handled at the species → clade attention-pool. The number of <i>clades</i> is data-dependent (V: ${STAR_VARIANTS.V.nc}, M: ${STAR_VARIANTS.M.nc}, P: ${STAR_VARIANTS.P.nc}), but for a given alignment it's fixed.</p>
+        <p>⚠ <b>Axial attention: not quite.</b> There's no column-wise attention over species at the same position (the way MSA Transformer does). Instead, "across-species" mixing happens in the attention-pool and in the phylogeny-biased cross-attention. Calling it axial is a useful approximation but not literally accurate.</p>
+        <p>⚠ Source embeddings <code>E^(c)</code> are <i>most likely</i> computed once before block 1 and reused as K/V across all blocks. The Methods text reads that way but the source code wasn't directly verified.</p>
+      `;
+    } else {
+      el.innerHTML = "";
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Render orchestrator
+  // ─────────────────────────────────────────────────────────────
+  function render() {
+    // toggle which controls are visible
+    document.getElementById("msa-controls").style.display = state.mode === "msa" ? "" : "none";
+    document.getElementById("star-controls").style.display = state.mode === "star" ? "" : "none";
+
+    // toggle layouts
+    const main = document.querySelector(".layout");
+    const cmp = document.getElementById("compare-layout");
+    if (state.mode === "compare") {
+      main.style.display = "grid";
+      cmp.style.display = "grid";
+      // hide center diagram of main panel, keep left+right
+      document.getElementById("msa-viz").style.display = "none";
+      document.getElementById("diagram").style.display = "none";
+      document.getElementById("notes").style.display = "none";
+      document.getElementById("diagram-title").textContent = "Side-by-side";
+    } else {
+      main.style.display = "grid";
+      cmp.style.display = "none";
+      document.getElementById("msa-viz").style.display = "";
+      document.getElementById("diagram").style.display = "";
+      document.getElementById("notes").style.display = "";
+    }
+
+    renderQA();
+    renderStats();
+    if (state.mode !== "compare") renderMsaViz();
+    renderDiagram();
+    renderCompare();
+    renderCallouts();
+    renderNotes();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  Wire controls
+  // ─────────────────────────────────────────────────────────────
+  document.querySelectorAll("#modeToggle button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll("#modeToggle button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      state.mode = b.dataset.mode;
+      render();
+    });
+  });
+
+  function bindSeg(id, key, cast = (v)=>v) {
+    document.querySelectorAll(`#${id} button`).forEach(b => {
+      b.addEventListener("click", () => {
+        document.querySelectorAll(`#${id} button`).forEach(x => x.classList.remove("active"));
+        b.classList.add("active");
+        state[key] = cast(b.dataset.val);
+        render();
+      });
+    });
+  }
+  bindSeg("seg-star-aln", "starAln");
+  bindSeg("seg-star-size", "starSize");
+
+  document.getElementById("rng-nt").addEventListener("input", e => {
+    state.starNT = parseInt(e.target.value, 10);
+    document.getElementById("nt-val").textContent = state.starNT;
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+pandas
+numpy
+scipy
+anndata
+
+# NTv3 backbone
+transformers>=4.55
+huggingface_hub>=0.23
+safetensors
+torch
+
+# Genomics I/O
+pyfaidx
+pyBigWig
+
+# Training
+torchmetrics

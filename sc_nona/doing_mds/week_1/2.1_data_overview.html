@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuomo et al. Data — What Exists & How to Get Coverage Tracks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f8f7f4;
+    --surface: #ffffff;
+    --surface2: #f2f1ed;
+    --border: #e4e2dc;
+    --text: #1a1916;
+    --text-muted: #6b6860;
+    --text-light: #9a9890;
+    --accent: #2d6a4f;
+    --accent-light: #e8f4ee;
+    --accent-mid: #52b788;
+    --warn: #c44b00;
+    --warn-light: #fef0e6;
+    --warn-mid: #f4845f;
+    --blue: #1a4e8a;
+    --blue-light: #e8f0fb;
+    --blue-mid: #4a90d9;
+    --purple: #5b3fa6;
+    --purple-light: #f0ebfb;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+    --shadow-lg: 0 2px 8px rgba(0,0,0,0.08), 0 12px 40px rgba(0,0,0,0.07);
+  }
+
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    padding: 0 0 80px;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────── */
+  header {
+    background: var(--text);
+    color: #fff;
+    padding: 56px 40px 48px;
+  }
+  .header-inner { max-width: 860px; margin: 0 auto; }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent-mid);
+    margin-bottom: 14px;
+  }
+  header h1 {
+    font-size: clamp(24px, 4vw, 38px);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    color: #fff;
+  }
+  header p.sub {
+    font-size: 16px;
+    color: rgba(255,255,255,0.6);
+    max-width: 620px;
+    line-height: 1.7;
+  }
+
+  /* ── LAYOUT ─────────────────────────────────────────── */
+  main { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+  section { margin-top: 56px; }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .section-intro {
+    font-size: 14.5px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    max-width: 680px;
+  }
+
+  /* ── CALLOUT BOX ─────────────────────────────────────── */
+  .callout {
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 28px 0;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .callout.warn { background: var(--warn-light); border-left: 3px solid var(--warn); }
+  .callout.good { background: var(--accent-light); border-left: 3px solid var(--accent); }
+  .callout.info { background: var(--blue-light); border-left: 3px solid var(--blue); }
+  .callout-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+  .callout-body { font-size: 14.5px; }
+  .callout-body strong { font-weight: 600; display: block; margin-bottom: 4px; }
+
+  /* ── PIPELINE DIAGRAM ────────────────────────────────── */
+  .pipeline {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 32px 28px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .pipeline-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    margin-bottom: 20px;
+  }
+  .pipeline-track {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 14px;
+    min-width: 600px;
+  }
+  .pipeline-track:last-child { margin-bottom: 0; }
+  .pipe-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .pipe-box {
+    padding: 9px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .pipe-label {
+    font-size: 10.5px;
+    color: var(--text-light);
+    text-align: center;
+    max-width: 90px;
+    line-height: 1.3;
+  }
+  .pipe-arrow {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-width: 24px;
+    max-width: 48px;
+    padding: 0 4px;
+    margin-bottom: 18px;
+  }
+  .pipe-arrow::after {
+    content: '';
+    display: block;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    position: relative;
+  }
+  .pipe-arrow.bad::after { background: #ffc3b0; }
+  .pipe-arrow.good::after { background: #a8d8b9; }
+
+  .pipe-box.file   { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .pipe-box.tool   { background: var(--blue-light); border: 1px solid #c8daf5; color: var(--blue); }
+  .pipe-box.tool.bad { background: var(--warn-light); border-color: #f9c9b0; color: var(--warn); }
+  .pipe-box.tool.good { background: var(--accent-light); border-color: #b5dfc8; color: var(--accent); }
+  .pipe-box.output { background: var(--accent-light); border: 1.5px solid var(--accent-mid); color: var(--accent); font-weight: 700; }
+  .pipe-box.output.bad { background: var(--warn-light); border-color: var(--warn-mid); color: var(--warn); font-weight: 400; text-decoration: line-through; }
+
+  .track-tag {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--text-light);
+    width: 20px;
+    flex-shrink: 0;
+    margin-right: 6px;
+    margin-bottom: 18px;
+  }
+  .track-tag.good { color: var(--accent); }
+  .track-tag.bad  { color: var(--warn); }
+
+  /* ── CONCEPT CARDS ───────────────────────────────────── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 20px;
+    box-shadow: var(--shadow);
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .card-icon.blue   { background: var(--blue-light); }
+  .card-icon.green  { background: var(--accent-light); }
+  .card-icon.warn   { background: var(--warn-light); }
+  .card-icon.purple { background: var(--purple-light); }
+  .card-icon.gray   { background: var(--surface2); }
+
+  .card-title { font-size: 14px; font-weight: 700; }
+  .card-mono  { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-muted); display: block; }
+  .card p { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+  .card p + p { margin-top: 8px; }
+  .tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 100px;
+    margin-top: 10px;
+  }
+  .tag.good   { background: var(--accent-light);  color: var(--accent); }
+  .tag.bad    { background: var(--warn-light);    color: var(--warn); }
+  .tag.blue   { background: var(--blue-light);    color: var(--blue); }
+  .tag.purple { background: var(--purple-light);  color: var(--purple); }
+  .tag.gray   { background: var(--surface2);      color: var(--text-muted); }
+
+  /* ── OPTIONS TABLE ───────────────────────────────────── */
+  .options { display: grid; gap: 16px; }
+  .option {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 20px;
+  }
+  .option.recommended { border-color: var(--accent-mid); border-width: 2px; }
+  .option-letter {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    padding-top: 2px;
+    color: var(--text-light);
+  }
+  .option.recommended .option-letter { color: var(--accent); }
+  .option-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .option-title { font-size: 15px; font-weight: 700; }
+  .option-body { font-size: 13.5px; color: var(--text-muted); line-height: 1.65; }
+  .option-body p + p { margin-top: 6px; }
+  .pill-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .pc-box { border-radius: var(--radius-sm); padding: 10px 12px; }
+  .pc-box.pros { background: var(--accent-light); }
+  .pc-box.cons { background: var(--warn-light); }
+  .pc-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+  .pc-box.pros .pc-label { color: var(--accent); }
+  .pc-box.cons .pc-label { color: var(--warn); }
+  .pc-box ul { list-style: none; padding: 0; }
+  .pc-box li { font-size: 12.5px; color: var(--text-muted); padding: 2px 0; }
+  .pc-box li::before { margin-right: 6px; }
+  .pc-box.pros li::before { content: '✓'; color: var(--accent-mid); }
+  .pc-box.cons li::before { content: '↳'; color: var(--warn-mid); }
+
+  /* ── CODE BLOCK ──────────────────────────────────────── */
+  .code-wrap {
+    background: #1a1916;
+    border-radius: var(--radius-sm);
+    padding: 16px 18px;
+    margin-top: 12px;
+    overflow-x: auto;
+  }
+  .code-wrap code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #d4cfc5;
+    white-space: pre;
+    line-height: 1.7;
+  }
+  .code-wrap code .cm  { color: #708090; }
+  .code-wrap code .kw  { color: var(--accent-mid); }
+  .code-wrap code .fl  { color: #f4d03f; }
+  .code-wrap code .op  { color: var(--blue-mid); }
+
+  /* ── SPLICING EXPLAINER ──────────────────────────────── */
+  .splice-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: var(--shadow);
+  }
+  .splice-title { font-size: 13px; font-weight: 600; margin-bottom: 20px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; }
+  .genome-row, .rna-row, .reads-row { margin-bottom: 20px; }
+  .row-label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+
+  .genome-bar {
+    height: 28px;
+    display: flex;
+    border-radius: 4px;
+    overflow: hidden;
+    gap: 2px;
+  }
+  .exon  { background: var(--blue); height: 100%; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 10.5px; color: #fff; font-weight: 600; }
+  .intron { background: var(--surface2); border: 1px solid var(--border); height: 100%; flex: 1.8; display: flex; align-items: center; justify-content: center; font-size: 10.5px; color: var(--text-light); font-style: italic; }
+  .mrna-bar {
+    height: 28px;
+    display: flex;
+    border-radius: 4px;
+    overflow: hidden;
+    gap: 2px;
+    width: 46%;
+  }
+  .read-row-inner { display: flex; gap: 6px; flex-direction: column; }
+  .read-wrap { position: relative; }
+  .read { height: 16px; border-radius: 3px; display: flex; align-items: center; padding: 0 6px; font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #fff; font-weight: 500; white-space: nowrap; }
+  .read.fits  { background: var(--accent); }
+  .read.spans { background: var(--blue); }
+  .read.bad   { background: var(--warn); }
+  .read-note { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; }
+
+  /* ── STAT ROW ─────────────────────────────────────────── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px;
+    margin: 24px 0;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat-num { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .stat-num.green  { color: var(--accent); }
+  .stat-num.orange { color: var(--warn); }
+  .stat-num.blue   { color: var(--blue); }
+
+  /* ── DIVIDER ─────────────────────────────────────────── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 48px 0 0; }
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  footer {
+    max-width: 860px;
+    margin: 32px auto 0;
+    padding: 0 24px;
+    font-size: 12px;
+    color: var(--text-light);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="eyebrow">Cuomo et al. 2020 · ENA PRJEB14362 · doing_mds/2.1</div>
+    <h1>From raw reads to base-pair coverage:<br>what data exists and how to use it</h1>
+    <p class="sub">A plain-English guide to the data formats, tools, and pipeline choices for getting BigWig coverage tracks from Cuomo et al.'s Smart-seq2 scRNA-seq data.</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── WHAT WE HAVE vs WANT ── -->
+  <section>
+    <h2>The situation at a glance</h2>
+    <p class="section-intro">Three data "levels" exist for this dataset. Only two are publicly available without an EGA application, and neither is exactly what we want.</p>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num blue">46,468</div>
+        <div class="stat-label">individual cell runs on ENA<br>(open access, CRAM format)</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num orange">0</div>
+        <div class="stat-label">BigWig / bedGraph coverage tracks anywhere publicly available</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num orange">0</div>
+        <div class="stat-label">splice-aware BAM files deposited publicly</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num green">4</div>
+        <div class="stat-label">processed files on Zenodo (gene counts only — not base-pair)</div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <strong>The Zenodo files are not what we need</strong>
+        The Zenodo record (zenodo.org/record/3625024) has gene-count matrices: one number per gene per cell. All the spatial, splicing, and allele information is gone. For a DNA language model that needs base-pair coverage, we must go back to the raw reads.
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SPLICING EXPLAINER ── -->
+  <section>
+    <h2>Why the aligner matters: splicing</h2>
+    <p class="section-intro">RNA is processed before it leaves the nucleus — "introns" are cut out, leaving only "exons." A read sequenced from mRNA can therefore span a junction between two exons that are far apart on the genome. Only an RNA-aware aligner can handle this.</p>
+
+    <div class="splice-diagram">
+      <div class="splice-title">What happens between DNA and a sequenced read</div>
+
+      <div class="genome-row">
+        <div class="row-label">Genomic DNA</div>
+        <div class="genome-bar">
+          <div class="exon">Exon 1</div>
+          <div class="intron">intron (~5,000 bp)</div>
+          <div class="exon">Exon 2</div>
+          <div class="intron">intron (~3,000 bp)</div>
+          <div class="exon">Exon 3</div>
+        </div>
+      </div>
+
+      <div class="rna-row">
+        <div class="row-label">Mature mRNA (introns removed)</div>
+        <div class="mrna-bar">
+          <div class="exon">Exon 1</div>
+          <div class="exon">Exon 2</div>
+          <div class="exon">Exon 3</div>
+        </div>
+      </div>
+
+      <div class="reads-row">
+        <div class="row-label">Sequenced reads (150 bp each)</div>
+        <div class="read-row-inner">
+          <div class="read-wrap">
+            <div class="read fits" style="width:28%">— — — — read A — — — —</div>
+            <div class="read-note">✅ Falls entirely in Exon 1. Any aligner handles this.</div>
+          </div>
+          <div class="read-wrap">
+            <div class="read spans" style="width:40%">— — read B spans junction — —</div>
+            <div class="read-note">✅ STAR (RNA-aware) maps this correctly — it knows about splice junctions.</div>
+          </div>
+          <div class="read-wrap">
+            <div class="read bad" style="width:40%">— — read B spans junction — —</div>
+            <div class="read-note">❌ BWA-MEM (DNA aligner) tries to place the whole read contiguously on the genome — fails or soft-clips, losing all the splicing signal.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FILE FORMAT GLOSSARY ── -->
+  <section>
+    <h2>File formats & tools explained</h2>
+    <p class="section-intro">Every format and program you'll encounter when working with this data.</p>
+
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon blue">📄</div>
+          <div>
+            <div class="card-title">FASTQ</div>
+            <span class="card-mono">.fastq.gz</span>
+          </div>
+        </div>
+        <p>The raw output from the sequencer. Each entry is one short DNA read (~150 bp) with a quality score per base. Think of it as a text file of millions of short DNA fragments, each paired with a confidence score.</p>
+        <p>This is the "purest" form of the data — no assumptions about where the reads come from.</p>
+        <span class="tag blue">Raw reads</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon gray">🗜️</div>
+          <div>
+            <div class="card-title">CRAM</div>
+            <span class="card-mono">.cram / .crai</span>
+          </div>
+        </div>
+        <p>A compressed alignment file. It stores the same information as a BAM file (where each read maps on the genome) but uses the reference genome to compress it, making it ~3× smaller.</p>
+        <p>The <code>.crai</code> is an index file — like a book index — allowing random access without reading the whole file.</p>
+        <span class="tag gray">Pre-aligned</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon gray">📦</div>
+          <div>
+            <div class="card-title">BAM</div>
+            <span class="card-mono">.bam / .bai</span>
+          </div>
+        </div>
+        <p>Like CRAM — a sorted, compressed alignment file storing where each read maps on the genome. Each row is a read with its genomic coordinates, mapping quality, and flags.</p>
+        <p>BAM is the standard input/output for most genomics tools.</p>
+        <span class="tag gray">Aligned reads</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon warn">🚫</div>
+          <div>
+            <div class="card-title">BWA-MEM</div>
+            <span class="card-mono">bwa mem</span>
+          </div>
+        </div>
+        <p>A DNA aligner — the standard tool for aligning whole-genome sequencing or exome data to a reference. It does not know that RNA has been spliced.</p>
+        <p><strong>This is what Sanger used to produce the CRAM files.</strong> It was the lab's default pipeline regardless of library type — a mistake for RNA-seq data.</p>
+        <span class="tag bad">Wrong for RNA-seq</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon green">⭐</div>
+          <div>
+            <div class="card-title">STAR</div>
+            <span class="card-mono">STAR</span>
+          </div>
+        </div>
+        <p>An RNA-aware splice junction aligner. STAR discovers exon-exon junctions in a first pass, then re-aligns all reads using this splice site map in a second pass ("2-pass mode"). It correctly places reads that span introns.</p>
+        <p>This is what the Cuomo paper itself used for analysis — but those BAM files were never deposited publicly.</p>
+        <span class="tag good">Correct for RNA-seq</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon purple">🐟</div>
+          <div>
+            <div class="card-title">Salmon</div>
+            <span class="card-mono">salmon quant</span>
+          </div>
+        </div>
+        <p>A transcript quantifier. Salmon takes reads and a transcript reference and outputs one number per gene: an estimated read count. It is extremely fast and accurate for gene expression analysis.</p>
+        <p><strong>Not what we want.</strong> Salmon discards the positional information entirely — it just counts, losing the base-pair coverage signal we need.</p>
+        <span class="tag bad">Loses position info</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon green">📊</div>
+          <div>
+            <div class="card-title">BigWig / bedGraph</div>
+            <span class="card-mono">.bw / .bedGraph</span>
+          </div>
+        </div>
+        <p>A coverage track — one number per genomic base position representing how many reads overlap that position. This is the base-pair resolution signal we want for training the DNA language model.</p>
+        <p>bedGraph is the text version; BigWig is the compressed binary version. Both store the same information.</p>
+        <span class="tag good">Base-pair resolution</span> <span class="tag good">What we want</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon blue">🔧</div>
+          <div>
+            <div class="card-title">samtools fastq</div>
+            <span class="card-mono">samtools fastq</span>
+          </div>
+        </div>
+        <p>Extracts the original raw reads back out of a CRAM or BAM file, discarding the alignment information. The result is a FASTQ file — as if the alignment never happened.</p>
+        <p>This lets us re-use the CRAMs as a compact download format, then re-align with STAR instead of BWA-MEM.</p>
+        <span class="tag blue">CRAM → FASTQ</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon green">📈</div>
+          <div>
+            <div class="card-title">bamCoverage</div>
+            <span class="card-mono">deeptools bamCoverage</span>
+          </div>
+        </div>
+        <p>Converts a BAM/CRAM file into a BigWig coverage track. Takes a sorted, indexed BAM and outputs one value per genomic bin (we want bin size = 1 bp for full resolution).</p>
+        <p>Also handles normalization (CPM, RPKM) so that cells with different sequencing depths are comparable.</p>
+        <span class="tag good">BAM → BigWig</span>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon purple">🛡️</div>
+          <div>
+            <div class="card-title">WASP filtering</div>
+            <span class="card-mono">--waspOutputMode SAMtag</span>
+          </div>
+        </div>
+        <p>When a read overlaps a position where the donor differs from the reference genome, there is a risk that reads carrying the reference allele map better than reads carrying the donor's allele — "reference bias."</p>
+        <p>WASP fixes this by re-mapping each affected read with the alleles flipped. If the result changes, the read is flagged and discarded. Built into modern STAR.</p>
+        <span class="tag purple">Removes allele bias</span>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── PIPELINE DIAGRAM ── -->
+  <section>
+    <h2>The full data pipeline</h2>
+    <p class="section-intro">How to go from what's publicly available (CRAMs on ENA) to what we actually need (per-cell BigWig coverage tracks).</p>
+
+    <div class="pipeline">
+      <div class="pipeline-label">Recommended path (Option A)</div>
+
+      <div class="pipeline-track">
+        <div class="track-tag good">✓</div>
+        <div class="pipe-node">
+          <div class="pipe-box file">CRAM<br>on ENA</div>
+          <div class="pipe-label">~37.9 GB total, open access</div>
+        </div>
+        <div class="pipe-arrow good"></div>
+        <div class="pipe-node">
+          <div class="pipe-box tool good">samtools<br>fastq</div>
+          <div class="pipe-label">discard BWA alignment, recover reads</div>
+        </div>
+        <div class="pipe-arrow good"></div>
+        <div class="pipe-node">
+          <div class="pipe-box tool good">STAR<br>2-pass</div>
+          <div class="pipe-label">splice-aware realignment to GRCh38</div>
+        </div>
+        <div class="pipe-arrow good"></div>
+        <div class="pipe-node">
+          <div class="pipe-box tool good">bamCoverage<br>--binSize 1</div>
+          <div class="pipe-label">1 bp resolution coverage</div>
+        </div>
+        <div class="pipe-arrow good"></div>
+        <div class="pipe-node">
+          <div class="pipe-box output">BigWig<br>per cell</div>
+          <div class="pipe-label">what we want ✓</div>
+        </div>
+      </div>
+
+      <div class="pipeline-label" style="margin-top:24px">What NOT to do</div>
+
+      <div class="pipeline-track">
+        <div class="track-tag bad">✗</div>
+        <div class="pipe-node">
+          <div class="pipe-box file">CRAM<br>on ENA</div>
+          <div class="pipe-label">BWA-MEM aligned</div>
+        </div>
+        <div class="pipe-arrow bad"></div>
+        <div class="pipe-node">
+          <div class="pipe-box tool bad">bamCoverage<br>directly</div>
+          <div class="pipe-label">skip re-alignment</div>
+        </div>
+        <div class="pipe-arrow bad"></div>
+        <div class="pipe-node">
+          <div class="pipe-box output bad">BigWig<br>per cell</div>
+          <div class="pipe-label">missing junction reads</div>
+        </div>
+      </div>
+
+      <div class="pipeline-track" style="margin-top:12px">
+        <div class="track-tag bad">✗</div>
+        <div class="pipe-node">
+          <div class="pipe-box file">CRAM<br>on ENA</div>
+          <div class="pipe-label">or Zenodo</div>
+        </div>
+        <div class="pipe-arrow bad"></div>
+        <div class="pipe-node">
+          <div class="pipe-box tool bad">Salmon /<br>featureCounts</div>
+          <div class="pipe-label">count per gene</div>
+        </div>
+        <div class="pipe-arrow bad"></div>
+        <div class="pipe-node">
+          <div class="pipe-box output bad">Gene count<br>matrix</div>
+          <div class="pipe-label">no positional info</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── THREE OPTIONS ── -->
+  <section>
+    <h2>Three ways to get coverage tracks</h2>
+    <p class="section-intro">The options differ in bandwidth, correctness, and compute. The recommended path is Option A.</p>
+
+    <div class="options">
+
+      <div class="option recommended">
+        <div class="option-letter">A</div>
+        <div>
+          <div class="option-head">
+            <div class="option-title">Re-align from CRAMs with STAR</div>
+            <span class="tag good">Recommended</span>
+          </div>
+          <div class="option-body">
+            <p>Download the CRAMs from ENA (~37.9 GB total), pipe each one through <code>samtools fastq</code> to recover the raw reads, then align with STAR in 2-pass mode. STAR can also emit bedGraph coverage directly with <code>--outWigType bedGraph</code>, skipping a separate bamCoverage step.</p>
+            <p>CRAMs are lossless containers of the original reads — using them saves ~3× bandwidth compared to downloading the separate FASTQ files. No information is lost by discarding the BWA alignment.</p>
+          </div>
+          <div class="pros-cons">
+            <div class="pc-box pros">
+              <div class="pc-label">Pros</div>
+              <ul>
+                <li>Correct splice-aware alignment</li>
+                <li>3× smaller than downloading FASTQs</li>
+                <li>Can emit BigWig in one step</li>
+                <li>Embarrassingly parallelizable</li>
+              </ul>
+            </div>
+            <div class="pc-box cons">
+              <div class="pc-label">Cons / caveats</div>
+              <ul>
+                <li>~10–30K CPU-hours total</li>
+                <li>Need hs37d5 reference to decode CRAMs</li>
+                <li>Need to re-align to GRCh38 yourself</li>
+              </ul>
+            </div>
+          </div>
+          <div class="code-wrap"><code><span class="cm"># For each cell CRAM:</span>
+<span class="kw">samtools</span> collate -uOn 128 cell.cram /tmp/tmp \
+  | <span class="kw">samtools</span> fastq -F 0xB00 -1 /dev/stdin -2 /dev/stdin - \
+  | <span class="kw">STAR</span> --runMode alignReads \
+        --genomeDir STAR_GRCh38 \
+        --outSAMtype BAM SortedByCoordinate \
+        --twopassMode Basic \
+        --outWigType bedGraph   <span class="cm"># base-pair coverage</span></code></div>
+        </div>
+      </div>
+
+      <div class="option">
+        <div class="option-letter">B</div>
+        <div>
+          <div class="option-head">
+            <div class="option-title">Use the BWA-MEM CRAMs as-is</div>
+            <span class="tag bad">Quick but imperfect</span>
+          </div>
+          <div class="option-body">
+            <p>Run <code>deeptools bamCoverage</code> directly on the existing CRAMs without re-aligning. Reads that span exon-exon junctions will be soft-clipped or missing, so the coverage at junctions is underestimated.</p>
+            <p>For a first exploratory pass, this may be acceptable — reads falling entirely within an exon will still map correctly. But it cannot be used for training a model that should learn about splicing.</p>
+          </div>
+          <div class="pros-cons">
+            <div class="pc-box pros">
+              <div class="pc-label">Pros</div>
+              <ul>
+                <li>Zero additional alignment compute</li>
+                <li>Good for quick exploratory checks</li>
+                <li>Exonic coverage is roughly correct</li>
+              </ul>
+            </div>
+            <div class="pc-box cons">
+              <div class="pc-label">Cons / caveats</div>
+              <ul>
+                <li>Splice junctions wrong/missing</li>
+                <li>Not suitable for final training data</li>
+                <li>Systematic bias against multi-exon reads</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="option">
+        <div class="option-letter">C</div>
+        <div>
+          <div class="option-head">
+            <div class="option-title">Download FASTQs from ENA, re-align</div>
+            <span class="tag gray">Also valid, more bandwidth</span>
+          </div>
+          <div class="option-body">
+            <p>ENA also exposes the reads as FASTQ files (decoded from the CRAMs). You can download these directly and run STAR on them — same outcome as Option A, but you skip the CRAM decode step. However, these FASTQs are ~3× larger to download than the CRAMs.</p>
+            <p>Useful if you don't want to deal with CRAM decoding or if you want to archive the FASTQs locally.</p>
+          </div>
+          <div class="pros-cons">
+            <div class="pc-box pros">
+              <div class="pc-label">Pros</div>
+              <ul>
+                <li>Correct splice-aware alignment (same as A)</li>
+                <li>Simpler pipeline (no CRAM decode)</li>
+                <li>Familiar format for most tools</li>
+              </ul>
+            </div>
+            <div class="pc-box cons">
+              <div class="pc-label">Cons / caveats</div>
+              <ul>
+                <li>~3× more download bandwidth</li>
+                <li>Larger local disk footprint</li>
+                <li>No benefit vs Option A otherwise</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="callout good" style="margin-top:24px">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>Scale estimate for the full dataset</strong>
+        ~36,000 cells × ~300K read pairs each = ~10–30K CPU-hours of STAR alignment. Each per-cell BigWig at 1 bp resolution will be ~5–50 MB. Total storage for all 36K cells: roughly <strong>200 GB – 2 TB</strong> depending on compression and binning. The pipeline is embarrassingly parallel — each cell can be processed independently.
+      </div>
+    </div>
+  </section>
+
+  <!-- ── WHERE THINGS LIVE ── -->
+  <section>
+    <h2>Where everything lives</h2>
+    <p class="section-intro">Quick reference for all accessions and download paths.</p>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon blue">🗄️</div>
+          <div>
+            <div class="card-title">ENA — Raw CRAMs</div>
+            <span class="card-mono">PRJEB14362</span>
+          </div>
+        </div>
+        <p>46,468 cell-level CRAM files. Open access, no login. BWA-MEM aligned (wrong aligner, but lossless — use as FASTQ source).</p>
+        <span class="tag good">Open access</span>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon warn">🔒</div>
+          <div>
+            <div class="card-title">EGA — Same CRAMs</div>
+            <span class="card-mono">EGAD00001005741</span>
+          </div>
+        </div>
+        <p>Same CRAM files as ENA, but behind a Data Access Committee application. 768 files, 37.9 GB. No additional data types — same content, just gated.</p>
+        <span class="tag bad">Managed access</span>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon warn">📉</div>
+          <div>
+            <div class="card-title">Zenodo — Gene counts</div>
+            <span class="card-mono">zenodo.org/record/3625024</span>
+          </div>
+        </div>
+        <p>4 files: raw counts CSV, log-normalized counts CSV, cell metadata TSV, ASE data (open-access lines only). No positional information.</p>
+        <span class="tag bad">Gene counts only</span> <span class="tag good">Open access</span>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon gray">💻</div>
+          <div>
+            <div class="card-title">GitHub — Pipeline code</div>
+            <span class="card-mono">singlecell_endodiff_paper</span>
+          </div>
+        </div>
+        <p>The Snakemake pipeline the paper used: CRAM → samtools fastq → STAR 2-pass → GATK → Salmon. Intermediate BAMs were never deposited. Code only.</p>
+        <span class="tag gray">Code only</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<hr>
+<footer>
+  Dataset: Cuomo et al. 2020 <em>Nat Commun</em> 11:810 · DOI 10.1038/s41467-020-14457-z · ENA PRJEB14362 · Zenodo 10.5281/zenodo.3625024<br>
+  Notes compiled 2026-06-17 · Arc Institute scRNA × DNA-LM project
+</footer>
+
+</body>
+</html>
