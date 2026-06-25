@@ -4,6 +4,6 @@
 /ntv3/.cache
 /ntv3/NTv3_8M_pre
 /ntv3/notebooks_tutorials
-
+/ntv3/ntv3_base_model/__pycache__/
 
 .DS_Store
