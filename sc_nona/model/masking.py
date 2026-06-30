@@ -80,7 +80,7 @@ class BlockAlongLengthMasker:
     in the masked region the model has only flanking DNA + cell identity from
     unmasked regions to work from.
 
-    TODO: also try masking only on the RNA. or only one some RNA tracks. 
+    TODO: also try masking only on the RNA. or only on some RNA tracks. 
     """
 
     def __init__(self, frac: float = 0.15, min_bins: int = 1):

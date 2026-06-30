@@ -34,8 +34,8 @@ Alternative RNA-MLM losses (not implemented; we use MSE-on-log1p for v1):
 
 NTv3 components we mirror (cf. 06_NTv3_generative_training.ipynb):
     * AdamW over only-trainable params
-    * LambdaLR with linear warmup then power-law decay (we use a simpler cosine
-      decay; modified_sqrt_decay can be swapped in)
+    * LambdaLR with linear warmup then NTv3's modified-sqrt power-law decay
+      (ported verbatim as `ntv3_sqrt_decay_schedule`)
     * Outer loop: zero_grad -> forward -> loss -> backward -> step -> sched.step -> log
     * Gradient accumulation supported by accumulating loss and stepping every K iters
 
@@ -126,24 +126,28 @@ def build_optimizer(
     return AdamW(params, lr=lr, betas=betas, weight_decay=weight_decay)
 
 
-def cosine_warmup_schedule(
+def ntv3_sqrt_decay_schedule(
     optimizer: torch.optim.Optimizer,
     warmup_steps: int,
     total_steps: int,
-    min_lr_ratio: float = 0.1,
+    *,
+    initial_lr: float = 0.0,
+    peak_lr: float,
+    final_ratio: float = 0.5,
 ) -> LambdaLR:
-    """Linear warmup then cosine decay to `min_lr_ratio * peak_lr`.
+    """Linear warmup -> power-law decay, ported verbatim from NTv3's
+    `get_modified_sqrt_decay_scheduler` in 06_NTv3_generative_training.ipynb.
 
-    (NTv3 uses linear warmup + power-law/sqrt decay -- see
-    `get_modified_sqrt_decay_scheduler` in 06_NTv3_generative_training.ipynb;
-    cosine is a fine substitute for our purposes and easier to reason about.)
+        Phase 1 (t < warmup_steps): linear from initial_lr to peak_lr.
+        Phase 2 (t >= warmup_steps): multiplier = (warmup_steps / (t + 1)) ** alpha
+            where alpha is chosen so multiplier == final_ratio at t = total_steps - 1.
     """
+    alpha = math.log(1 / final_ratio) / math.log(total_steps / max(1, warmup_steps))
+
     def lr_lambda(step: int) -> float:
         if step < warmup_steps:
-            return step / max(1, warmup_steps)
-        progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
-        cosine = 0.5 * (1.0 + math.cos(math.pi * min(progress, 1.0)))
-        return min_lr_ratio + (1.0 - min_lr_ratio) * cosine
+            return (initial_lr + (peak_lr - initial_lr) * step / max(1, warmup_steps)) / peak_lr
+        return (warmup_steps / (step + 1)) ** alpha
 
     return LambdaLR(optimizer, lr_lambda=lr_lambda)
 
@@ -160,6 +164,7 @@ class StepInputs:
     dna_targets: torch.Tensor     # (B, L) original token ids at masked positions, ignore_index elsewhere
     rna_targets: torch.Tensor     # (B, L_bin, D) log1p targets
     rna_mask: torch.Tensor        # (B, L_bin, D) bool, True at masked entries
+    dna_bin_mask: torch.Tensor    # (B, L_bin) bool, True at bins where DNA was masked
 
 
 def prepare_batch(
@@ -188,6 +193,7 @@ def prepare_batch(
         dna_targets=dna_targets,
         rna_targets=rna_targets,
         rna_mask=rna_mask,
+        dna_bin_mask=dna_bin_mask,
     )
 
 

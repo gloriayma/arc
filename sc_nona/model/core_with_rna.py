@@ -138,18 +138,31 @@ class CoreWithRNA(Core):
         return outs
 
 
-def load_pretrained(model_name: str, *, token: str | None = None) -> CoreWithRNA:
+def load_pretrained(
+    model_name: str,
+    *,
+    token: str | None = None,
+    local_files_only: bool = False,
+) -> CoreWithRNA:
     """Instantiate CoreWithRNA and load weights from an NTv3 HF checkpoint.
 
     Strips the `core.` prefix on state_dict keys because the saved NTv3 model
     is `NTv3PreTrained.core`, not `Core` directly.
+
+    `local_files_only=True` reads from the HF cache only (skips any network
+    check). Use after a successful online run when you want to keep training
+    fully offline.
     """
     from huggingface_hub import hf_hub_download
     from safetensors.torch import load_file
 
-    cfg = Ntv3PreTrainedConfig.from_pretrained(model_name, token=token)
+    cfg = Ntv3PreTrainedConfig.from_pretrained(
+        model_name, token=token, local_files_only=local_files_only,
+    )
     model = CoreWithRNA(cfg)
-    weights_path = hf_hub_download(model_name, "model.safetensors", token=token)
+    weights_path = hf_hub_download(
+        model_name, "model.safetensors", token=token, local_files_only=local_files_only,
+    )
     sd_full = load_file(weights_path)
     sd = {k.removeprefix("core."): v for k, v in sd_full.items() if k.startswith("core.")}
     # strict=False lets the lazily-built rotary cache buffers be (re)created on

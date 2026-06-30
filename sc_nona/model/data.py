@@ -173,7 +173,13 @@ class GenomicWindowDataset(Dataset):
             rna[:, d] = vals
         rna_matrix = torch.from_numpy(rna)
 
-        return {"dna_tokens": dna_tokens, "rna_matrix": rna_matrix}
+        return {
+            "dna_tokens": dna_tokens,
+            "rna_matrix": rna_matrix,
+            "chrom": w.chrom,
+            "start": int(w.start),
+            "end": int(w.end),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +216,13 @@ class SyntheticGenomicDataset(Dataset):
         return self.num_windows
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
-        return {"dna_tokens": self._dna[idx], "rna_matrix": self._rna[idx]}
+        return {
+            "dna_tokens": self._dna[idx],
+            "rna_matrix": self._rna[idx],
+            "chrom": "synthetic",
+            "start": idx * self.window_length,
+            "end": (idx + 1) * self.window_length,
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -218,10 +230,16 @@ class SyntheticGenomicDataset(Dataset):
 # ---------------------------------------------------------------------------
 
 
-def collate_windows(samples: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
+def collate_windows(samples: list[dict]) -> dict:
     dna_tokens = torch.stack([s["dna_tokens"] for s in samples], dim=0)  # (B, L)
     rna_matrix = torch.stack([s["rna_matrix"] for s in samples], dim=0)  # (B, L, D)
-    return {"dna_tokens": dna_tokens, "rna_matrix": rna_matrix}
+    return {
+        "dna_tokens": dna_tokens,
+        "rna_matrix": rna_matrix,
+        "chrom": [s["chrom"] for s in samples],
+        "start": [s["start"] for s in samples],
+        "end": [s["end"] for s in samples],
+    }
 
 
 def make_dataloader(
@@ -240,4 +258,5 @@ def make_dataloader(
         collate_fn=collate_windows,
         drop_last=drop_last,
         pin_memory=torch.cuda.is_available(),
+        persistent_workers=num_workers > 0,
     )

@@ -27,7 +27,7 @@ from model.masking import BlockAlongLengthMasker  # noqa: E402
 from model.model import NTv3WithRNA  # noqa: E402
 from model.train import (  # noqa: E402
     build_optimizer,
-    cosine_warmup_schedule,
+    ntv3_sqrt_decay_schedule,
     prepare_batch,
     train_step,
 )
@@ -73,7 +73,9 @@ def overfit_one_batch(
     )
 
     optimizer = build_optimizer(model, lr=lr)
-    scheduler = cosine_warmup_schedule(optimizer, warmup_steps=20, total_steps=steps)
+    scheduler = ntv3_sqrt_decay_schedule(
+        optimizer, warmup_steps=20, total_steps=steps, peak_lr=lr,
+    )
 
     history: dict[str, list[float]] = {
         "l_dna_stock": [], "l_dna_with_rna": [], "l_rna": [], "total": [], "lr": []

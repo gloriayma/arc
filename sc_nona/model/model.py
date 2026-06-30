@@ -67,8 +67,9 @@ class NTv3WithRNA(nn.Module):
         token: str | None = None,
         num_axial_layers: int = 4,
         num_heads: int = 4,
+        local_files_only: bool = False,
     ) -> "NTv3WithRNA":
-        core = load_pretrained(model_name, token=token)
+        core = load_pretrained(model_name, token=token, local_files_only=local_files_only)
         return cls(
             core=core,
             d_rna=d_rna,
